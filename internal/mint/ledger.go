@@ -3,6 +3,7 @@ package mint
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/gohumble/cashu-feni/internal/core"
@@ -12,6 +13,8 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"math"
+	"os"
+	"path"
 	"reflect"
 	"strconv"
 )
@@ -32,10 +35,18 @@ type Ledger struct {
 
 // NewLedger creates a new ledger and derives keys
 func NewLedger(masterKey string) *Ledger {
-	orm, err := gorm.Open(sqlite.Open("data/database.db"), &gorm.Config{DisableForeignKeyConstraintWhenMigrating: true, FullSaveAssociations: true})
+	if _, err := os.Stat(Config.DbPath); errors.Is(err, os.ErrNotExist) {
+		err = os.MkdirAll(Config.DbPath, os.ModePerm)
+		if err != nil {
+			panic(err)
+		}
+	}
+	orm, err := gorm.Open(sqlite.Open(path.Join(Config.DbPath, "database.db")),
+		&gorm.Config{DisableForeignKeyConstraintWhenMigrating: true, FullSaveAssociations: true})
 	if err != nil {
 		panic(err)
 	}
+
 	err = orm.AutoMigrate(&lightning.Invoice{})
 	if err != nil {
 		panic(err)
