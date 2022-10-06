@@ -421,30 +421,28 @@ func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.Blinded
 	outsSnd := amountSplit(amount)
 	B_fst := make([]*secp256k1.PublicKey, 0)
 	B_snd := make([]*secp256k1.PublicKey, 0)
-	if len(outsFts) > 0 {
-		for _, data := range outputs[:len(outsFts)] {
-			b, err := hex.DecodeString(data.B_)
-			if err != nil {
-				return nil, nil, err
-			}
-			key, err := secp256k1.ParsePubKey(b)
-			if err != nil {
-				return nil, nil, err
-			}
-			B_fst = append(B_fst, key)
+	for _, data := range outputs[:len(outsFts)] {
+		b, err := hex.DecodeString(data.B_)
+		if err != nil {
+			return nil, nil, err
 		}
+		key, err := secp256k1.ParsePubKey(b)
+		if err != nil {
+			return nil, nil, err
+		}
+		B_fst = append(B_fst, key)
+	}
 
-		for _, data := range outputs[len(outsFts):] {
-			b, err := hex.DecodeString(data.B_)
-			if err != nil {
-				return nil, nil, err
-			}
-			key, err := secp256k1.ParsePubKey(b)
-			if err != nil {
-				return nil, nil, err
-			}
-			B_snd = append(B_snd, key)
+	for _, data := range outputs[len(outsFts):] {
+		b, err := hex.DecodeString(data.B_)
+		if err != nil {
+			return nil, nil, err
 		}
+		key, err := secp256k1.ParsePubKey(b)
+		if err != nil {
+			return nil, nil, err
+		}
+		B_snd = append(B_snd, key)
 	}
 	// create promises for outputs
 	fstPromise, err := l.generatePromises(outsFts, B_fst)
