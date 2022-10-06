@@ -1,0 +1,282 @@
+definitions:
+  core.BlindedMessage:
+    properties:
+      B_:
+        type: string
+      amount:
+        type: integer
+    type: object
+  core.Proof:
+    properties:
+      C:
+        type: string
+      amount:
+        type: integer
+      secret:
+        type: string
+    type: object
+  mint.CheckFeesRequest:
+    properties:
+      pr:
+        type: string
+    type: object
+  mint.CheckFeesResponse:
+    properties:
+      fee:
+        type: integer
+    type: object
+  mint.CheckRequest:
+    properties:
+      proofs:
+        items:
+          $ref: '#/definitions/core.Proof'
+        type: array
+    type: object
+  mint.CheckResponse:
+    additionalProperties:
+      type: boolean
+    type: object
+  mint.ErrorResponse:
+    properties:
+      code:
+        type: integer
+      error:
+        type: string
+    type: object
+  mint.GetKeysResponse:
+    additionalProperties:
+      type: string
+    type: object
+  mint.GetMintResponse:
+    properties:
+      hash:
+        type: string
+      pr:
+        type: string
+    type: object
+  mint.MeltRequest:
+    properties:
+      amount:
+        type: integer
+      invoice:
+        type: string
+      proofs:
+        items:
+          $ref: '#/definitions/core.Proof'
+        type: array
+    type: object
+  mint.MeltResponse:
+    properties:
+      paid:
+        type: boolean
+      preimage:
+        type: string
+    type: object
+  mint.SplitRequest:
+    properties:
+      amount:
+        type: integer
+      outputs:
+        properties:
+          blinded_messages:
+            items:
+              $ref: '#/definitions/core.BlindedMessage'
+            type: array
+        type: object
+      proofs:
+        items:
+          $ref: '#/definitions/core.Proof'
+        type: array
+    type: object
+  mint.SplitResponse:
+    properties:
+      fst:
+        type: string
+      snd:
+        type: string
+    type: object
+info:
+  contact:
+    url: https://8333.space:3338
+  description: Ecash wallet and mint with Bitcoin Lightning support.
+  title: Cashu (Gongo) golang mint
+  version: 0.0.1
+paths:
+  /check:
+    post:
+      description: Get currently available public keys
+      parameters:
+      - description: Model containing proofs to check
+        in: body
+        name: CheckRequest
+        required: true
+        schema:
+          $ref: '#/definitions/mint.CheckRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mint.CheckResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/mint.ErrorResponse'
+      summary: Check spendable
+      tags:
+      - POST
+  /checkfees:
+    post:
+      description: Check fees for lightning payment.
+      parameters:
+      - description: Model containing lightning invoice
+        in: body
+        name: CheckFeesRequest
+        required: true
+        schema:
+          $ref: '#/definitions/mint.CheckFeesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mint.CheckFeesResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/mint.ErrorResponse'
+      summary: Check Fee
+      tags:
+      - POST
+  /keys:
+    get:
+      description: Get the public keys of the mint
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mint.GetKeysResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/mint.ErrorResponse'
+      summary: Keys
+      tags:
+      - GET
+  /melt:
+    post:
+      description: Requests tokens to be destroyed and sent out via Lightning.
+      parameters:
+      - description: Model containing proofs to melt
+        in: body
+        name: MeltRequest
+        required: true
+        schema:
+          $ref: '#/definitions/mint.MeltRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mint.MeltResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/mint.ErrorResponse'
+      summary: Melt
+      tags:
+      - POST
+  /mint:
+    get:
+      description: Requests the minting of tokens belonging to a paid payment request.
+      parameters:
+      - description: amount of the mint
+        in: query
+        name: amount
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mint.GetMintResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/mint.ErrorResponse'
+      summary: Request Mint
+      tags:
+      - GET
+    post:
+      description: |-
+        Requests the minting of tokens belonging to a paid payment request.
+
+        Parameters: pr: payment_request of the Lightning paid invoice.
+
+        Body (JSON): payloads: contains a list of blinded messages waiting to be signed.
+
+        NOTE:
+
+        * This needs to be replaced by the preimage otherwise someone knowing the payment_request can request the tokens instead of the rightful owner.
+        * The blinded message should ideally be provided to the server before payment in the GET /mint endpoint so that the server knows to sign only these tokens when the invoice is paid.
+      parameters:
+      - description: Model containing proofs to mint
+        in: body
+        name: core.BlindedMessages
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/core.BlindedMessage'
+          type: array
+      - description: payment hash for the mint
+        in: query
+        name: payment_hash
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/core.BlindedMessage'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/mint.ErrorResponse'
+      summary: Mint
+      tags:
+      - POST
+  /split:
+    post:
+      description: Requetst a set of tokens with amount "total" to be split into two
+        newly minted sets with amount "split" and "total-split".
+      parameters:
+      - description: Model containing proofs to split
+        in: body
+        name: SplitRequest
+        required: true
+        schema:
+          $ref: '#/definitions/mint.SplitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mint.SplitResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/mint.ErrorResponse'
+      summary: Split your proofs
+      tags:
+      - POST
+swagger: "2.0"
