@@ -2,8 +2,12 @@ package lightning
 
 // Will handle the yaml configuration for the proxy.
 import (
+	"encoding/json"
+	"errors"
 	"github.com/jinzhu/configor"
+	log "github.com/sirupsen/logrus"
 	"math"
+	"os"
 )
 
 // Configuration for lnbits
@@ -19,11 +23,25 @@ type Configuration struct {
 
 var Config Configuration
 
+const name = "config.yaml"
+
 func init() {
-	err := configor.Load(&Config, "config.yaml")
-	if err != nil {
-		panic(err)
+	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
+		Config.Lnbits.Enabled = false
+		cfg, err := json.Marshal(Config)
+		if err != nil {
+			panic(err)
+		}
+		log.Warnf("could not load configuration. using default mint configuration instead")
+		log.Warnf(string(cfg))
+	} else {
+		c := configor.New(&configor.Config{Silent: true, ErrorOnUnmatchedKeys: true})
+		err = c.Load(&Config, "config.yaml")
+		if err != nil {
+			panic(err)
+		}
 	}
+
 }
 
 func FeeReserve(amountMsat int64, internal bool) int64 {
