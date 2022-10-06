@@ -17,6 +17,8 @@ USER feni
 
 COPY --from=builder /build/cashu /app/
 
+EXPOSE 3338
+
 WORKDIR /app
 
 CMD ["./cashu"]
