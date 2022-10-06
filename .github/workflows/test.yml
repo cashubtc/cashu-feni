@@ -19,9 +19,9 @@ jobs:
       - name: Build
         run: go build -v ./...
       - name: Run
-        run: go run .
+        run: nohup go run . &
       - name: Test
-        run: nohup go test -v ./...
+        run: go test -v ./...
       - uses: actions/checkout@v2
         with:
           repository: callebtc/cashu
