@@ -1,5 +1,6 @@
 doc_ref: http://localhost:3338/swagger/doc.json
 log_level: debug
+db_path: data
 mint:
   host: localhost
   port: 3338
