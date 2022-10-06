@@ -38,6 +38,7 @@ func init() {
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
 		Config.Mint.Tls.Enabled = false
 		Config.Mint.Host = "0.0.0.0"
+		Config.DbPath = "data"
 		Config.Mint.Port = "3338"
 		Config.Mint.PrivateKey = "not-very-secure"
 		Config.LogLevel = "trace"
