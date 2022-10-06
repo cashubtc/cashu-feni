@@ -22,10 +22,6 @@ jobs:
         run: nohup go run . &
       - name: Test
         run: go test -v ./...
-      - uses: actions/checkout@v2
-        with:
-          repository: callebtc/cashu
-          path: cashu
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -34,12 +30,14 @@ jobs:
         uses: abatilo/actions-poetry@v2
         with:
           poetry-version: ${{ matrix.poetry-version }}
-      - name: Install dependencies
-        run: |
-          poetry install --with dev
+      - uses: actions/checkout@v2
         with:
           repository: callebtc/cashu
           path: cashu
+      - name: Install dependencies
+        run: |
+          cd cashu
+          poetry install --with dev
       - name: Run tests
         env:
           LIGHTNING: False
