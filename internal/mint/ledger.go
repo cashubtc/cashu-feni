@@ -292,7 +292,7 @@ func verifySplitAmount(amount int64) (int64, error) {
 // verifyAmount make sure that amount is bigger than zero and smaller than 2^MaxOrder
 func verifyAmount(amount int64) (int64, error) {
 	if amount < 0 || amount > 2^MaxOrder {
-		return 0, fmt.Errorf("invalid amount: %d", amount)
+		return 0, fmt.Errorf("invalid split amount: %d", amount)
 	}
 	return amount, nil
 }
@@ -367,7 +367,7 @@ func (l *Ledger) melt(proofs []core.Proof, amount int64, invoice string) (status
 			return false, "", err
 		}
 		if !ok {
-			return false, "", fmt.Errorf("could not verify proof")
+			return false, "", fmt.Errorf("could not verify proofs")
 		}
 		total += proof.Amount
 	}
@@ -409,7 +409,7 @@ func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.Blinded
 			return nil, nil, err
 		}
 		if !vp {
-			return nil, nil, fmt.Errorf("invalid proof")
+			return nil, nil, fmt.Errorf("no secret in proof.")
 		}
 		total += proof.Amount
 	}

@@ -44,4 +44,5 @@ jobs:
           MINT_HOST: localhost
           MINT_PORT: 3338
         run: |
+          cd cashu
           poetry run pytest tests
