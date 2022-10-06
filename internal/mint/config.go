@@ -48,7 +48,7 @@ func init() {
 		log.Warnf("could not load configuration. using default mint configuration instead")
 		log.Warnf(string(cfg))
 	} else {
-		c := configor.New(&configor.Config{Silent: true, ErrorOnUnmatchedKeys: true})
+		c := configor.New(&configor.Config{Silent: true})
 		err = c.Load(&Config, name)
 		if err != nil {
 			panic(err)
