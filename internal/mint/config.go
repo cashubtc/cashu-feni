@@ -2,7 +2,11 @@ package mint
 
 // Will handle the yaml configuration for the proxy.
 import (
+	"encoding/json"
+	"errors"
 	"github.com/jinzhu/configor"
+	log "github.com/sirupsen/logrus"
+	"os"
 )
 
 type ServerConfiguration struct {
@@ -27,9 +31,28 @@ type Configuration struct {
 
 var Config Configuration
 
+const name = "config.yaml"
+
 func init() {
-	err := configor.Load(&Config, "config.yaml")
-	if err != nil {
-		panic(err)
+	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
+		Config.Mint.Tls.Enabled = false
+		Config.Mint.Host = "0.0.0.0"
+		Config.Mint.Port = "3338"
+		Config.Mint.PrivateKey = "not-very-secure"
+		Config.LogLevel = "trace"
+		Config.DocReference = "http://0.0.0.0:3338/swagger/doc.json"
+		cfg, err := json.Marshal(Config)
+		if err != nil {
+			panic(err)
+		}
+		log.Warnf("could not load configuration. using default mint configuration instead")
+		log.Warnf(string(cfg))
+	} else {
+		c := configor.New(&configor.Config{Silent: true, ErrorOnUnmatchedKeys: true})
+		err = c.Load(&Config, name)
+		if err != nil {
+			panic(err)
+		}
 	}
+
 }
