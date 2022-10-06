@@ -9,13 +9,13 @@ import (
 	"io"
 )
 
-// @title Cashu (Gongo) golang mint
+// @title Cashu (Feni) golang mint
 // @version 0.0.1
 // @description Ecash wallet and mint with Bitcoin Lightning support.
 // @contact.url https://8333.space:3338
 func main() {
 	initializeLogger()
-	log.Info("starting (gongo) cashu mint server")
+	log.Info("starting (feni) cashu mint server")
 	m := mint.New()
 	m.StartServer()
 }

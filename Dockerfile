@@ -7,7 +7,7 @@ RUN apk --no-cache add git alpine-sdk build-base gcc
 
 WORKDIR /build
 
-RUN go build -o feni  .
+RUN go build -o cashu  .
 
 FROM alpine:latest
 
@@ -15,8 +15,8 @@ RUN adduser -S -D -H -h /app feni
 
 USER feni
 
-COPY --from=builder /build/feni /app/
+COPY --from=builder /build/cashu /app/
 
 WORKDIR /app
 
-CMD ["./feni"]
+CMD ["./cashu"]

@@ -31,6 +31,7 @@ func New() *Mint {
 	}
 	lightning.LnbitsClient = lightning.NewClient(lightning.Config.Lnbits.AdminKey, lightning.Config.Lnbits.Url)
 	m.HttpServer.Handler = m.newRouter()
+	log.Trace("created mint server")
 	return m
 }
 func responseError(w http.ResponseWriter, err ErrorResponse) {
