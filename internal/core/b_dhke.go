@@ -6,6 +6,7 @@ import (
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 )
 
+// hashToCurve will generate a public key on the curve.
 func hashToCurve(secretMessage []byte) *secp256k1.PublicKey {
 	msg := secretMessage
 	for {
@@ -27,6 +28,7 @@ func hashToCurve(secretMessage []byte) *secp256k1.PublicKey {
 
 }
 
+// FirstStepAlice creates blinded secrets and produces outputs
 func FirstStepAlice(secretMessage string) (*secp256k1.PublicKey, *secp256k1.PrivateKey) {
 	Y := hashToCurve([]byte(secretMessage))
 	r, err := secp256k1.GeneratePrivateKey()
@@ -43,6 +45,7 @@ func FirstStepAlice(secretMessage string) (*secp256k1.PublicKey, *secp256k1.Priv
 	return B_, r
 }
 
+// SecondStepBob signes blinded secrets and produces promises
 func SecondStepBob(B_ secp256k1.PublicKey, a secp256k1.PrivateKey) *secp256k1.PublicKey {
 	var pointB_, Cp_ secp256k1.JacobianPoint
 	B_.AsJacobian(&pointB_)
@@ -52,6 +55,7 @@ func SecondStepBob(B_ secp256k1.PublicKey, a secp256k1.PrivateKey) *secp256k1.Pu
 	return C_
 }
 
+// ThirdStepAlice Alice unbinds blinded signatures and produces proofs
 func ThirdStepAlice(c_ secp256k1.PublicKey, r secp256k1.PrivateKey, A secp256k1.PublicKey) *secp256k1.PublicKey {
 	var pointA, AMult, C_, Cp secp256k1.JacobianPoint
 	A.AsJacobian(&pointA)
@@ -63,6 +67,7 @@ func ThirdStepAlice(c_ secp256k1.PublicKey, r secp256k1.PrivateKey, A secp256k1.
 	return secp256k1.NewPublicKey(&Cp.X, &Cp.Y)
 }
 
+// Verify that secret was signed by bob.
 func Verify(a secp256k1.PrivateKey, c secp256k1.PublicKey, secretMessage string) bool {
 	var Y, Result secp256k1.JacobianPoint
 	k := []byte(secretMessage)
