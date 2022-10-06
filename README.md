@@ -55,13 +55,19 @@ Download the latest binary from [releases](https://github.com/gohumble/cashu-fen
 
 ## Using Docker
 
-Start cashu-feni using docker. Please provide local volume path to `config.yaml` and to the data folder.
+Start cashu-feni using docker. Please provide a local volume path to the data folder.
 
+```bash
+docker run -it -p 3338:3338 \
+-v /home/user/cashu-feni/data/:/app/data/ \
+gohumble/cashu-feni
+```
+Mounting custom `config.yaml` to `/app/config.yaml`
 ```bash
 docker run -it -p 3338:3338 \
 -v /home/user/config.yaml:/app/config.yaml \
 -v /home/user/cashu-feni/data/:/app/data/ \
-cashu
+gohumble/cashu-feni
 ```
 
 ### Build image

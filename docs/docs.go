@@ -434,7 +434,7 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Cashu (Gongo) golang mint",
+	Title:            "Cashu (Feni) golang mint",
 	Description:      "Ecash wallet and mint with Bitcoin Lightning support.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

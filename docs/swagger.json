@@ -2,7 +2,7 @@
     "swagger": "2.0",
     "info": {
         "description": "Ecash wallet and mint with Bitcoin Lightning support.",
-        "title": "Cashu (Gongo) golang mint",
+        "title": "Cashu (Feni) golang mint",
         "contact": {
             "url": "https://8333.space:3338"
         },
