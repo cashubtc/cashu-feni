@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+	"github.com/gohumble/cashu-feni/internal/cashu"
 	"github.com/gohumble/cashu-feni/internal/core"
 	"github.com/gohumble/cashu-feni/internal/lightning"
 	"github.com/gorilla/mux"
@@ -34,10 +35,13 @@ func New() *Mint {
 	log.Trace("created mint server")
 	return m
 }
-func responseError(w http.ResponseWriter, err ErrorResponse) {
+func responseError(w http.ResponseWriter, err cashu.ErrorResponse) {
 	log.WithFields(log.Fields{"error.message": err.Error(), "code": err.Code}).Error(err)
 	response := err.String()
-	fmt.Fprintf(w, response)
+	_, writeError := fmt.Fprintf(w, response)
+	if writeError != nil {
+		log.WithFields(log.Fields{"error.message": writeError.Error()}).Error(writeError)
+	}
 
 }
 func Use(h http.HandlerFunc, middleware ...func(http.HandlerFunc) http.HandlerFunc) http.HandlerFunc {
@@ -103,21 +107,24 @@ func (m Mint) checkFee(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&feesRequest)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	fee, err := m.ledger.checkFees(feesRequest.Pr)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	response := CheckFeesResponse{Fee: fee / 1000}
 	res, err := json.Marshal(response)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	fmt.Fprintf(w, string(res))
+	_, writeError := fmt.Fprintf(w, string(res))
+	if writeError != nil {
+		log.WithFields(log.Fields{"error.message": writeError.Error()}).Error(writeError)
+	}
 }
 
 // getMint is the http handler function for GET /mint
@@ -137,13 +144,13 @@ func (m Mint) getMint(w http.ResponseWriter, r *http.Request) {
 	}
 	invoice, err := requestMint(lightning.LnbitsClient, int64(ai))
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	log.WithField("invoice", invoice).Infof("created lightning invoice")
 	_, err = fmt.Fprintf(w, `{"pr": "%s", "hash": "%s"}`, invoice.Pr, invoice.Hash)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 }
@@ -183,24 +190,24 @@ func (m Mint) mint(w http.ResponseWriter, r *http.Request) {
 		hkey, err = hex.DecodeString(msg.B_)
 		publicKey, err := secp256k1.ParsePubKey(hkey)
 		if err != nil {
-			responseError(w, NewErrorResponse(err))
+			responseError(w, cashu.NewErrorResponse(err))
 			return
 		}
 		B_s = append(B_s, publicKey)
 	}
 	promises, err := m.ledger.mint(lightning.LnbitsClient, B_s, amounts, pr)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	data, err := json.Marshal(promises)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	_, err = fmt.Fprintf(w, string(data))
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 }
@@ -228,12 +235,12 @@ func (m Mint) melt(w http.ResponseWriter, r *http.Request) {
 	response := MeltResponse{Paid: ok, Preimage: preimage}
 	res, err := json.Marshal(response)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	_, err = fmt.Fprintf(w, string(res))
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 }
@@ -249,13 +256,13 @@ func (m Mint) melt(w http.ResponseWriter, r *http.Request) {
 func (m Mint) getKeys(w http.ResponseWriter, r *http.Request) {
 	key, err := json.Marshal(m.ledger.GetPublicKeys())
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	w.WriteHeader(200)
 	_, err = fmt.Fprintf(w, string(key))
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 }
@@ -274,17 +281,17 @@ func (m Mint) check(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&payload)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 	}
 	spendable := m.ledger.checkSpendables(payload.Proofs)
 	res, err := json.Marshal(spendable)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	_, err = fmt.Fprintf(w, string(res))
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 }
@@ -315,22 +322,22 @@ func (m Mint) split(w http.ResponseWriter, r *http.Request) {
 	outputs := payload.Outputs
 	fstPromise, sendPromise, err := m.ledger.split(proofs, amount, outputs.BlindedMessages)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	fstb, err := json.Marshal(fstPromise)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	sstb, err := json.Marshal(sendPromise)
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	_, err = fmt.Fprintf(w, fmt.Sprintf(`{"fst": %s, "snd": %s}`, string(fstb), string(sstb)))
 	if err != nil {
-		responseError(w, NewErrorResponse(err))
+		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 }

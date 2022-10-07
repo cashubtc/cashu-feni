@@ -1,7 +1,7 @@
 package lightning
 
 import (
-	"github.com/gohumble/cashu-feni/internal/core"
+	"github.com/gohumble/cashu-feni/internal/cashu"
 	"github.com/imroc/req"
 )
 
@@ -80,7 +80,7 @@ type Invoice struct {
 }
 
 func (i Invoice) String() string {
-	return core.ToJson(i)
+	return cashu.ToJson(i)
 }
 
 type LNbitsPayment struct {

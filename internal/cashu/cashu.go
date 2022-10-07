@@ -1,6 +1,6 @@
-package mint
+package cashu
 
-import "github.com/gohumble/cashu-feni/internal/core"
+import "encoding/json"
 
 type ErrorResponse struct {
 	Err  string `json:"error"`
@@ -24,9 +24,17 @@ func NewErrorResponse(err error, options ...ErrorOptions) ErrorResponse {
 }
 
 func (e ErrorResponse) String() string {
-	return core.ToJson(e)
+	return ToJson(e)
 }
 
 func (e ErrorResponse) Error() string {
 	return e.Err
+}
+
+func ToJson(i interface{}) string {
+	b, err := json.Marshal(i)
+	if err != nil {
+		return err.Error()
+	}
+	return string(b)
 }
