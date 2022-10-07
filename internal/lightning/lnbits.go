@@ -64,6 +64,9 @@ func (c *Client) CreateInvoice(params InvoiceParams) (lntx Invoice, err error) {
 	}
 
 	err = resp.ToJSON(&lntx)
+	if err == nil {
+		lntx.Amount = params.Amount
+	}
 	return
 }
 

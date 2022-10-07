@@ -120,8 +120,8 @@ func (l *Ledger) checkFees(pr string) (int64, error) {
 	return lightning.FeeReserve(amount*1000, internal), nil
 }
 
-// checkLightningInvoice will check payment status for pr
-func (l *Ledger) checkLightningInvoice(c *lightning.Client, paymentHash string) (bool, error) {
+// checkLightningInvoice will check the lightning invoice amount matches the outputs amount.
+func (l *Ledger) checkLightningInvoice(c *lightning.Client, amounts []int64, paymentHash string) (bool, error) {
 	invoice, err := getLightningInvoice(paymentHash)
 	if err != nil {
 		return false, err
@@ -130,6 +130,14 @@ func (l *Ledger) checkLightningInvoice(c *lightning.Client, paymentHash string) 
 		return false, fmt.Errorf("tokens already issued for this invoice.")
 	}
 	payment, err := c.GetInvoiceStatus(paymentHash)
+	// sum all amounts
+	total := lo.SumBy[int64](amounts, func(amount int64) int64 {
+		return amount
+	})
+	// validate total and invoice amount
+	if total > invoice.Amount {
+		return false, fmt.Errorf("requested amount too high: %d. Invoice amount: %d", total, invoice.Amount)
+	}
 	if err != nil {
 		return false, err
 	}
@@ -154,7 +162,7 @@ func (l *Ledger) payLightningInvoice(c *lightning.Client, pr string, feesMsat in
 // mint generates promises for keys. checks lightning invoice before creating promise.
 func (l *Ledger) mint(c *lightning.Client, keys []*secp256k1.PublicKey, amounts []int64, pr string) ([]core.BlindedSignature, error) {
 	if lightning.Config.Lnbits.Enabled {
-		paid, err := l.checkLightningInvoice(c, pr)
+		paid, err := l.checkLightningInvoice(c, amounts, pr)
 		if err != nil {
 			return nil, err
 		}
