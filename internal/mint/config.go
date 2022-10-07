@@ -19,7 +19,7 @@ type Configuration struct {
 	LogLevel     string `yaml:"log_level" json:"log_level"`
 	DbPath       string `yaml:"db_path" json:"db_path"`
 	Mint         struct {
-		PrivateKey string `json:"mint_private_key" yaml:"mint_private_key"`
+		PrivateKey string `json:"private_key" yaml:"private_key"`
 		Host       string `json:"host" yaml:"host"`
 		Port       string `json:"port" yaml:"port"`
 		Tls        struct {

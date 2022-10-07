@@ -59,14 +59,14 @@ Start cashu-feni using docker. Please provide a local volume path to the data fo
 
 ```bash
 docker run -it -p 3338:3338 \
--v /home/user/cashu-feni/data/:/app/data/ \
+-v $(pwd)/data/:/app/data/ \
 gohumble/cashu-feni
 ```
 Mounting custom `config.yaml` to `/app/config.yaml`
 ```bash
 docker run -it -p 3338:3338 \
--v /home/user/config.yaml:/app/config.yaml \
--v /home/user/cashu-feni/data/:/app/data/ \
+-v $(pwd)/config.yaml:/app/config.yaml \
+-v $(pwd)/data/:/app/data/ \
 gohumble/cashu-feni
 ```
 
