@@ -154,11 +154,11 @@ func (l *Ledger) payLightningInvoice(c *lightning.Client, pr string, feesMsat in
 // mint generates promises for keys. checks lightning invoice before creating promise.
 func (l *Ledger) mint(c *lightning.Client, keys []*secp256k1.PublicKey, amounts []int64, pr string) ([]core.BlindedSignature, error) {
 	if lightning.Config.Lnbits.Enabled {
-		payed, err := l.checkLightningInvoice(c, pr)
+		paid, err := l.checkLightningInvoice(c, pr)
 		if err != nil {
 			return nil, err
 		}
-		if !payed {
+		if !paid {
 			return nil, fmt.Errorf("Lightning invoice not paid yet.")
 		}
 	}
