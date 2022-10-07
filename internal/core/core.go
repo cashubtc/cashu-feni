@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -32,12 +31,4 @@ type BlindedMessage struct {
 type BlindedSignature struct {
 	Amount int64  `json:"amount"`
 	C_     string `json:"C_"`
-}
-
-func ToJson(i interface{}) string {
-	b, err := json.Marshal(i)
-	if err != nil {
-		return err.Error()
-	}
-	return string(b)
 }
