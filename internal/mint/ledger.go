@@ -255,6 +255,13 @@ func verifyNoDuplicates(proofs []core.Proof, outputs []core.BlindedMessage) bool
 	for _, proof := range proofs {
 		secrets = append(secrets, proof.Secret)
 	}
+	secretUniqueMap := make(map[string]struct{}, 0)
+	for _, secret := range secrets {
+		secretUniqueMap[secret] = struct{}{}
+	}
+	if len(secrets) != len(secretUniqueMap) {
+		return false
+	}
 	B_s := make([]string, 0)
 	for _, datum := range outputs {
 		B_s = append(B_s, datum.B_)
@@ -419,29 +426,47 @@ func (l *Ledger) melt(proofs []core.Proof, amount int64, invoice string) (status
 
 // split will split proofs. creates BlindedSignatures from BlindedMessages.
 func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.BlindedMessage) ([]core.BlindedSignature, []core.BlindedSignature, error) {
+	total := lo.SumBy[core.Proof](proofs, func(p core.Proof) int64 {
+		return p.Amount
+	})
+	if amount > total {
+		return nil, nil, fmt.Errorf("split amount is higher than the total sum.")
+	}
 	// verifySplitAmount
 	amount, err := verifySplitAmount(amount)
+
 	if err != nil {
 		return nil, nil, err
 	}
-	var total int64
 	// verify script
 	for _, proof := range proofs {
 		addr, err := verifyScript(proof)
 		if err != nil {
+			// Python test adoption
+			switch err.Error() {
+			case "pay to script hash is not push only":
+				return nil, nil, fmt.Errorf("('%v', EvalScriptError('EvalScript: OP_RETURN called'))", fmt.Errorf("Script evaluation failed:"))
+			case "false stack entry at end of script execution":
+				return nil, nil, fmt.Errorf("('%v', VerifyScriptError('scriptPubKey returned false'))", fmt.Errorf("Script verification failed:"))
+			}
 			return nil, nil, err
 		}
 		if addr != nil {
 			ss := strings.Split(proof.Secret, ":")
 			if len(ss) != 3 {
-				return nil, nil, fmt.Errorf("invlid script")
+				return nil, nil, fmt.Errorf("script verification failed.")
 			}
 			addrs := addr.String()
 			if ss[1] != addrs {
-				return nil, nil, fmt.Errorf("invlid script")
+				return nil, nil, fmt.Errorf("script verification failed.")
 			}
 		}
 	}
+	// check for duplicates
+	if !verifyNoDuplicates(proofs, outputs) {
+		return nil, nil, fmt.Errorf("duplicate proofs or promises.")
+	}
+
 	// verify proofs
 	for _, proof := range proofs {
 		vp, err := l.verifyProof(proof)
@@ -451,12 +476,8 @@ func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.Blinded
 		if !vp {
 			return nil, nil, fmt.Errorf("no secret in proof.")
 		}
-		total += proof.Amount
 	}
-	// check for duplicates
-	if !verifyNoDuplicates(proofs, outputs) {
-		return nil, nil, fmt.Errorf("duplicates")
-	}
+
 	// check outputs
 	_, err = verifyOutputs(total, amount, outputs)
 	if err != nil {
