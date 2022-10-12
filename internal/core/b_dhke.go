@@ -2,26 +2,38 @@ package core
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 )
 
+/*
+def hash_to_curve(message: bytes):
+    """Generates a point from the message hash and checks if the point lies on the curve.
+    If it does not, it tries computing a new point from the hash."""
+    point = None
+    msg_to_hash = message
+    while point is None:
+        try:
+            _hash = hashlib.sha256(msg_to_hash).digest()
+            point = PublicKey(b"\x02" + _hash, raw=True)
+        except:
+            msg_to_hash = _hash
+    return point
+
+*/
 // hashToCurve will generate a public key on the curve.
 func hashToCurve(secretMessage []byte) *secp256k1.PublicKey {
 	msg := secretMessage
 	for {
 		hasher := sha256.New()
 		hasher.Write(msg)
-		h := hex.EncodeToString(hasher.Sum(nil))
-		hash := []byte(h)[:33]
-		hash[0] = 0x02
-		pub, err := secp256k1.ParsePubKey(hash)
+		hash := hasher.Sum(nil)
+		point, err := secp256k1.ParsePubKey(append([]byte{0x02}, hash...))
 		if err != nil {
 			msg = hash
 			continue
 		}
-		if pub.IsOnCurve() {
-			return pub
+		if point.IsOnCurve() {
+			return point
 		}
 		continue
 	}
