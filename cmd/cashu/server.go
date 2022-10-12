@@ -1,13 +1,15 @@
-package mint
+package main
 
 import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/gohumble/cashu-feni/internal/cashu"
-	"github.com/gohumble/cashu-feni/internal/core"
-	"github.com/gohumble/cashu-feni/internal/lightning"
+	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/gohumble/cashu-feni/core"
+	"github.com/gohumble/cashu-feni/db"
+	"github.com/gohumble/cashu-feni/lightning"
+	"github.com/gohumble/cashu-feni/mint"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -21,6 +23,7 @@ const (
 )
 
 func New() *Mint {
+	db := db.NewSqlDatabase()
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("%s:%s", Config.Mint.Host, Config.Mint.Port),
 		WriteTimeout: 90 * time.Second,
@@ -28,10 +31,10 @@ func New() *Mint {
 	}
 	m := &Mint{
 		HttpServer: srv,
-		ledger:     NewLedger(Config.Mint.PrivateKey),
+		Ledger:     mint.NewLedger(Config.Mint.PrivateKey, db),
 	}
 	lightning.LnbitsClient = lightning.NewClient(lightning.Config.Lnbits.AdminKey, lightning.Config.Lnbits.Url)
-	m.HttpServer.Handler = m.newRouter()
+	m.HttpServer.Handler = newRouter(*m)
 	log.Trace("created mint server")
 	return m
 }
@@ -66,7 +69,7 @@ func (m Mint) StartServer() {
 		log.Println(m.HttpServer.ListenAndServe())
 	}
 }
-func (m Mint) newRouter() *mux.Router {
+func newRouter(m Mint) *mux.Router {
 	router := mux.NewRouter()
 	// route to receive mint public keys
 	router.HandleFunc("/keys", Use(m.getKeys, LoggingMiddleware)).Methods(http.MethodGet)
@@ -111,7 +114,7 @@ func (m Mint) checkFee(w http.ResponseWriter, r *http.Request) {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	fee, err := m.ledger.checkFees(feesRequest.Pr)
+	fee, err := m.Ledger.CheckFees(feesRequest.Pr)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -143,7 +146,7 @@ func (m Mint) getMint(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Errorf("error checking amount")
 	}
-	invoice, err := requestMint(lightning.LnbitsClient, int64(ai))
+	invoice, err := m.Ledger.RequestMint(lightning.LnbitsClient, int64(ai))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -196,7 +199,7 @@ func (m Mint) mint(w http.ResponseWriter, r *http.Request) {
 		}
 		B_s = append(B_s, publicKey)
 	}
-	promises, err := m.ledger.mint(lightning.LnbitsClient, B_s, amounts, pr)
+	promises, err := m.Ledger.Mint(lightning.LnbitsClient, B_s, amounts, pr)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -229,7 +232,7 @@ func (m Mint) melt(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	ok, preimage, err := m.ledger.melt(payload.Proofs, payload.Amount, payload.Invoice)
+	ok, preimage, err := m.Ledger.Melt(payload.Proofs, payload.Amount, payload.Invoice)
 	if err != nil {
 		log.WithFields(log.Fields{"error.message": err.Error()}).Errorf("error in melt")
 	}
@@ -255,7 +258,7 @@ func (m Mint) melt(w http.ResponseWriter, r *http.Request) {
 // @Router /keys [get]
 // @Tags GET
 func (m Mint) getKeys(w http.ResponseWriter, r *http.Request) {
-	key, err := json.Marshal(m.ledger.GetPublicKeys())
+	key, err := json.Marshal(m.Ledger.GetPublicKeys())
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -287,7 +290,7 @@ func (m Mint) check(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 	}
-	spendable := m.ledger.checkSpendables(payload.Proofs)
+	spendable := m.Ledger.CheckSpendables(payload.Proofs)
 	res, err := json.Marshal(spendable)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
@@ -324,7 +327,7 @@ func (m Mint) split(w http.ResponseWriter, r *http.Request) {
 		payload.Outputs.BlindedMessages = payload.OutputData.BlindedMessages
 	}
 	outputs := payload.Outputs
-	fstPromise, sendPromise, err := m.ledger.split(proofs, amount, outputs.BlindedMessages)
+	fstPromise, sendPromise, err := m.Ledger.Split(proofs, amount, outputs.BlindedMessages)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return

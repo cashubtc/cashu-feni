@@ -1,13 +1,14 @@
-package mint
+package main
 
 import (
-	"github.com/gohumble/cashu-feni/internal/core"
+	"github.com/gohumble/cashu-feni/core"
+	"github.com/gohumble/cashu-feni/mint"
 	"net/http"
 )
 
 type Mint struct {
 	HttpServer *http.Server
-	ledger     *Ledger
+	Ledger     *mint.Ledger
 }
 
 type MintResponse core.BlindedMessages

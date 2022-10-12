@@ -1,7 +1,7 @@
 package lightning
 
 import (
-	"github.com/gohumble/cashu-feni/internal/cashu"
+	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/imroc/req"
 )
 

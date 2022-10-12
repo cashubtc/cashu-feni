@@ -4,20 +4,16 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/gohumble/cashu-feni/internal/core"
-	"github.com/gohumble/cashu-feni/internal/lightning"
-	"github.com/gohumble/cashu-feni/pkg/bitcoin"
+	"github.com/gohumble/cashu-feni/bitcoin"
+	"github.com/gohumble/cashu-feni/core"
+	"github.com/gohumble/cashu-feni/db"
+	"github.com/gohumble/cashu-feni/lightning"
 	decodepay "github.com/nbd-wtf/ln-decodepay"
 	"github.com/samber/lo"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"math"
-	"os"
-	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -35,45 +31,22 @@ type Ledger struct {
 	privateKeys map[int64]*secp256k1.PrivateKey
 	// publicKeys map of amount:publicKey
 	publicKeys map[int64]*secp256k1.PublicKey
+	database   db.MintStorage
 }
 
 // NewLedger creates a new ledger and derives keys
-func NewLedger(masterKey string) *Ledger {
-	if _, err := os.Stat(Config.DbPath); errors.Is(err, os.ErrNotExist) {
-		err = os.MkdirAll(Config.DbPath, os.ModePerm)
-		if err != nil {
-			panic(err)
-		}
-	}
-	orm, err := gorm.Open(sqlite.Open(path.Join(Config.DbPath, "database.db")),
-		&gorm.Config{DisableForeignKeyConstraintWhenMigrating: true, FullSaveAssociations: true})
-	if err != nil {
-		panic(err)
-	}
-
-	err = orm.AutoMigrate(&lightning.Invoice{})
-	if err != nil {
-		panic(err)
-	}
-	err = orm.AutoMigrate(&core.Proof{})
-	if err != nil {
-		panic(err)
-	}
-	err = orm.AutoMigrate(&core.Promise{})
-	if err != nil {
-		panic(err)
-	}
-	Database = orm
+func NewLedger(masterKey string, db db.MintStorage) *Ledger {
 
 	l := &Ledger{
 		masterKey:   masterKey,
 		proofsUsed:  make([]string, 0),
 		privateKeys: make(map[int64]*secp256k1.PrivateKey),
 		publicKeys:  make(map[int64]*secp256k1.PublicKey),
+		database:    db,
 	}
 	l.deriveKeys()
 	l.derivePublicKeys()
-	lo.ForEach[core.Proof](getUsedProofs(orm), func(proof core.Proof, i int) {
+	lo.ForEach[core.Proof](l.database.GetUsedProofs(), func(proof core.Proof, i int) {
 		l.proofsUsed = append(l.proofsUsed, proof.Secret)
 	})
 	return l
@@ -96,18 +69,18 @@ func (l *Ledger) derivePublicKeys() {
 }
 
 // requestMint will create and return the lightning invoice for a mint
-func requestMint(c *lightning.Client, amount int64) (lightning.Invoice, error) {
+func (l *Ledger) RequestMint(c *lightning.Client, amount int64) (lightning.Invoice, error) {
 	invoice, err := c.CreateInvoice(lightning.InvoiceParams{Amount: amount})
 	if err != nil {
 		return invoice, err
 	}
-	err = storeLightningInvoice(invoice)
+	err = l.database.StoreLightningInvoice(invoice)
 	if err != nil {
 		return invoice, err
 	}
 	return invoice, nil
 }
-func (l *Ledger) checkFees(pr string) (int64, error) {
+func (l *Ledger) CheckFees(pr string) (int64, error) {
 	decodedInvoice, err := decodepay.Decodepay(pr)
 	if err != nil {
 		return 0, err
@@ -126,7 +99,7 @@ func (l *Ledger) checkFees(pr string) (int64, error) {
 
 // checkLightningInvoice will check the lightning invoice amount matches the outputs amount.
 func (l *Ledger) checkLightningInvoice(c *lightning.Client, amounts []int64, paymentHash string) (bool, error) {
-	invoice, err := getLightningInvoice(paymentHash)
+	invoice, err := l.database.GetLightningInvoice(paymentHash)
 	if err != nil {
 		return false, err
 	}
@@ -146,7 +119,7 @@ func (l *Ledger) checkLightningInvoice(c *lightning.Client, amounts []int64, pay
 		return false, err
 	}
 	if payment.Paid {
-		err = updateLightningInvoice(paymentHash, true)
+		err = l.database.UpdateLightningInvoice(paymentHash, true)
 		if err != nil {
 			return false, err
 		}
@@ -164,7 +137,7 @@ func (l *Ledger) payLightningInvoice(c *lightning.Client, pr string, feesMsat in
 }
 
 // mint generates promises for keys. checks lightning invoice before creating promise.
-func (l *Ledger) mint(c *lightning.Client, keys []*secp256k1.PublicKey, amounts []int64, pr string) ([]core.BlindedSignature, error) {
+func (l *Ledger) Mint(c *lightning.Client, keys []*secp256k1.PublicKey, amounts []int64, pr string) ([]core.BlindedSignature, error) {
 	if lightning.Config.Lnbits.Enabled {
 		paid, err := l.checkLightningInvoice(c, amounts, pr)
 		if err != nil {
@@ -188,7 +161,7 @@ func (l *Ledger) mint(c *lightning.Client, keys []*secp256k1.PublicKey, amounts 
 // generatePromise will generate promise and signature for given amount using public key
 func (l *Ledger) generatePromise(amount int64, B_ *secp256k1.PublicKey) (core.BlindedSignature, error) {
 	C_ := core.SecondStepBob(*B_, *l.privateKeys[amount])
-	err := storePromise(core.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
+	err := l.database.StorePromise(core.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
 	if err != nil {
 		return core.BlindedSignature{}, err
 	}
@@ -291,7 +264,7 @@ func verifyNoDuplicates(proofs []core.Proof, outputs []core.BlindedMessage) bool
 }
 
 // checkSpendables checks multiple proofs
-func (l *Ledger) checkSpendables(proofs []core.Proof) map[int]bool {
+func (l *Ledger) CheckSpendables(proofs []core.Proof) map[int]bool {
 	result := make(map[int]bool, 0)
 	for i, proof := range proofs {
 		result[i] = l.checkSpendable(proof)
@@ -380,7 +353,7 @@ func (l *Ledger) invalidateProofs(proofs []core.Proof) error {
 	l.proofsUsed = lo.Uniq[string](l.proofsUsed)
 	// invalidate all proofs
 	for _, proof := range proofs {
-		err := invalidateProof(proof)
+		err := l.database.InvalidateProof(proof)
 		if err != nil {
 			return err
 		}
@@ -402,7 +375,7 @@ if not all( [self._verify_proof(p) for p in proofs]):
 raise Exception ("could not verify proofs.")
 */
 // melt will meld proofs
-func (l *Ledger) melt(proofs []core.Proof, amount int64, invoice string) (status bool, preimage string, err error) {
+func (l *Ledger) Melt(proofs []core.Proof, amount int64, invoice string) (status bool, preimage string, err error) {
 	var total int64
 	for _, proof := range proofs {
 		// verify every proof and sum total amount
@@ -415,7 +388,7 @@ func (l *Ledger) melt(proofs []core.Proof, amount int64, invoice string) (status
 	// decode invoice and use this amount instead of melt amount
 	bolt, err := decodepay.Decodepay(invoice)
 	amount = int64(math.Ceil(float64(bolt.MSatoshi / 1000)))
-	fee, err := l.checkFees(invoice)
+	fee, err := l.CheckFees(invoice)
 	if err != nil {
 		return false, "", err
 	}
@@ -436,7 +409,7 @@ func (l *Ledger) melt(proofs []core.Proof, amount int64, invoice string) (status
 }
 
 // split will split proofs. creates BlindedSignatures from BlindedMessages.
-func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.BlindedMessage) ([]core.BlindedSignature, []core.BlindedSignature, error) {
+func (l *Ledger) Split(proofs []core.Proof, amount int64, outputs []core.BlindedMessage) ([]core.BlindedSignature, []core.BlindedSignature, error) {
 	total := lo.SumBy[core.Proof](proofs, func(p core.Proof) int64 {
 		return p.Amount
 	})

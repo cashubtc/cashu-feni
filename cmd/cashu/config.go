@@ -1,4 +1,4 @@
-package mint
+package main
 
 // Will handle the yaml configuration for the proxy.
 import (
@@ -17,8 +17,8 @@ type ServerConfiguration struct {
 type Configuration struct {
 	DocReference string `yaml:"doc_ref" json:"doc_ref"`
 	LogLevel     string `yaml:"log_level" json:"log_level"`
-	DbPath       string `yaml:"db_path" json:"db_path"`
-	Mint         struct {
+
+	Mint struct {
 		PrivateKey string `json:"private_key" yaml:"private_key"`
 		Host       string `json:"host" yaml:"host"`
 		Port       string `json:"port" yaml:"port"`
@@ -38,7 +38,6 @@ func init() {
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
 		Config.Mint.Tls.Enabled = false
 		Config.Mint.Host = "0.0.0.0"
-		Config.DbPath = "data"
 		Config.Mint.Port = "3338"
 		Config.Mint.PrivateKey = "not-very-secure"
 		Config.LogLevel = "trace"

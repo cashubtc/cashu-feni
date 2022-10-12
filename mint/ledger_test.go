@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/gohumble/cashu-feni/internal/core"
+	"github.com/gohumble/cashu-feni/core"
 	"reflect"
 	"testing"
 )
