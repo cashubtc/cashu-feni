@@ -70,6 +70,7 @@ func (m Mint) newRouter() *mux.Router {
 	router := mux.NewRouter()
 	// route to receive mint public keys
 	router.HandleFunc("/keys", Use(m.getKeys, LoggingMiddleware)).Methods(http.MethodGet)
+	router.HandleFunc("/keysets", Use(m.getKeysets, LoggingMiddleware)).Methods(http.MethodGet)
 	// route to get mint (create tokens)
 	router.HandleFunc("/mint", Use(m.getMint, LoggingMiddleware)).Methods(http.MethodGet)
 	// route to real mint (with LIGHTNING enabled)
@@ -265,6 +266,9 @@ func (m Mint) getKeys(w http.ResponseWriter, r *http.Request) {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
+}
+func (m Mint) getKeysets(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(`{"keysets":{}}`))
 }
 
 // check is the http handler function for POST /check
