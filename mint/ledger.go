@@ -8,7 +8,8 @@ import (
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/gohumble/cashu-feni/bitcoin"
-	"github.com/gohumble/cashu-feni/core"
+	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/gohumble/cashu-feni/crypto"
 	"github.com/gohumble/cashu-feni/db"
 	"github.com/gohumble/cashu-feni/lightning"
 	decodepay "github.com/nbd-wtf/ln-decodepay"
@@ -46,7 +47,7 @@ func NewLedger(masterKey string, db db.MintStorage) *Ledger {
 	}
 	l.deriveKeys()
 	l.derivePublicKeys()
-	lo.ForEach[core.Proof](l.database.GetUsedProofs(), func(proof core.Proof, i int) {
+	lo.ForEach[cashu.Proof](l.database.GetUsedProofs(), func(proof cashu.Proof, i int) {
 		l.proofsUsed = append(l.proofsUsed, proof.Secret)
 	})
 	return l
@@ -137,7 +138,7 @@ func (l *Ledger) payLightningInvoice(c *lightning.Client, pr string, feesMsat in
 }
 
 // mint generates promises for keys. checks lightning invoice before creating promise.
-func (l *Ledger) Mint(c *lightning.Client, keys []*secp256k1.PublicKey, amounts []int64, pr string) ([]core.BlindedSignature, error) {
+func (l *Ledger) Mint(c *lightning.Client, keys []*secp256k1.PublicKey, amounts []int64, pr string) ([]cashu.BlindedSignature, error) {
 	if lightning.Config.Lnbits.Enabled {
 		paid, err := l.checkLightningInvoice(c, amounts, pr)
 		if err != nil {
@@ -147,7 +148,7 @@ func (l *Ledger) Mint(c *lightning.Client, keys []*secp256k1.PublicKey, amounts 
 			return nil, fmt.Errorf("Lightning invoice not paid yet.")
 		}
 	}
-	promises := make([]core.BlindedSignature, 0)
+	promises := make([]cashu.BlindedSignature, 0)
 	for i, key := range keys {
 		sig, err := l.generatePromise(amounts[i], key)
 		if err != nil {
@@ -159,18 +160,18 @@ func (l *Ledger) Mint(c *lightning.Client, keys []*secp256k1.PublicKey, amounts 
 }
 
 // generatePromise will generate promise and signature for given amount using public key
-func (l *Ledger) generatePromise(amount int64, B_ *secp256k1.PublicKey) (core.BlindedSignature, error) {
-	C_ := core.SecondStepBob(*B_, *l.privateKeys[amount])
-	err := l.database.StorePromise(core.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
+func (l *Ledger) generatePromise(amount int64, B_ *secp256k1.PublicKey) (cashu.BlindedSignature, error) {
+	C_ := crypto.SecondStepBob(*B_, *l.privateKeys[amount])
+	err := l.database.StorePromise(cashu.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
 	if err != nil {
-		return core.BlindedSignature{}, err
+		return cashu.BlindedSignature{}, err
 	}
-	return core.BlindedSignature{C_: hex.EncodeToString(C_.SerializeCompressed()), Amount: amount}, nil
+	return cashu.BlindedSignature{C_: hex.EncodeToString(C_.SerializeCompressed()), Amount: amount}, nil
 }
 
 // generatePromises will generate multiple promises and signatures
-func (l *Ledger) generatePromises(amounts []int64, keys []*secp256k1.PublicKey) ([]core.BlindedSignature, error) {
-	promises := make([]core.BlindedSignature, 0)
+func (l *Ledger) generatePromises(amounts []int64, keys []*secp256k1.PublicKey) ([]cashu.BlindedSignature, error) {
+	promises := make([]cashu.BlindedSignature, 0)
 	for i, key := range keys {
 		p, err := l.generatePromise(amounts[i], key)
 		if err != nil {
@@ -182,7 +183,7 @@ func (l *Ledger) generatePromises(amounts []int64, keys []*secp256k1.PublicKey) 
 }
 
 // verifyProof will verify proof
-func (l *Ledger) verifyProof(proof core.Proof) error {
+func (l *Ledger) verifyProof(proof cashu.Proof) error {
 	if !l.checkSpendable(proof) {
 		return fmt.Errorf("tokens already spent. Secret: %s", proof.Secret)
 	}
@@ -195,14 +196,14 @@ func (l *Ledger) verifyProof(proof core.Proof) error {
 	if err != nil {
 		return err
 	}
-	if core.Verify(*secretKey, *C, proof.Secret, core.HashToCurve) ||
-		core.Verify(*secretKey, *C, proof.Secret, core.LegacyHashToCurve) {
+	if crypto.Verify(*secretKey, *C, proof.Secret, crypto.HashToCurve) ||
+		crypto.Verify(*secretKey, *C, proof.Secret, crypto.LegacyHashToCurve) {
 		return nil
 	}
 	return fmt.Errorf("could not verify proofs.")
 }
 
-func verifyScript(proof core.Proof) (addr *btcutil.AddressScriptHash, err error) {
+func verifyScript(proof cashu.Proof) (addr *btcutil.AddressScriptHash, err error) {
 	if proof.Script == nil || proof.Script.Script == "" || proof.Script.Signature == "" {
 		if len(strings.Split(proof.Secret, "P2SH:")) == 2 {
 			return nil, fmt.Errorf("secret indicates a script but no script is present")
@@ -224,7 +225,7 @@ func verifyScript(proof core.Proof) (addr *btcutil.AddressScriptHash, err error)
 }
 
 // verifyOutputs verify output data
-func verifyOutputs(total, amount int64, outputs []core.BlindedMessage) (bool, error) {
+func verifyOutputs(total, amount int64, outputs []cashu.BlindedMessage) (bool, error) {
 	fstAmt, sndAmt := total-amount, amount
 	fstOutputs := amountSplit(fstAmt)
 	sndOutputs := amountSplit(sndAmt)
@@ -237,7 +238,7 @@ func verifyOutputs(total, amount int64, outputs []core.BlindedMessage) (bool, er
 }
 
 // verifyNoDuplicates checks if there are any duplicates
-func verifyNoDuplicates(proofs []core.Proof, outputs []core.BlindedMessage) bool {
+func verifyNoDuplicates(proofs []cashu.Proof, outputs []cashu.BlindedMessage) bool {
 	secrets := make([]string, 0)
 	for _, proof := range proofs {
 		secrets = append(secrets, proof.Secret)
@@ -264,7 +265,7 @@ func verifyNoDuplicates(proofs []core.Proof, outputs []core.BlindedMessage) bool
 }
 
 // checkSpendables checks multiple proofs
-func (l *Ledger) CheckSpendables(proofs []core.Proof) map[int]bool {
+func (l *Ledger) CheckSpendables(proofs []cashu.Proof) map[int]bool {
 	result := make(map[int]bool, 0)
 	for i, proof := range proofs {
 		result[i] = l.checkSpendable(proof)
@@ -273,7 +274,7 @@ func (l *Ledger) CheckSpendables(proofs []core.Proof) map[int]bool {
 }
 
 // checkSpendable returns true if proof was not used before
-func (l *Ledger) checkSpendable(proof core.Proof) bool {
+func (l *Ledger) checkSpendable(proof cashu.Proof) bool {
 	_, found := lo.Find[string](l.proofsUsed, func(p string) bool {
 		return p == proof.Secret
 	})
@@ -315,7 +316,7 @@ func verifyAmount(amount int64) (int64, error) {
 }
 
 // verifyEquationBalanced verify that equation is balanced.
-func verifyEquationBalanced(proofs []core.Proof, outs []core.BlindedSignature) (bool, error) {
+func verifyEquationBalanced(proofs []cashu.Proof, outs []cashu.BlindedSignature) (bool, error) {
 	var sumInputs int64
 	var sumOutputs int64
 	// sum proof amounts
@@ -339,7 +340,7 @@ func verifyEquationBalanced(proofs []core.Proof, outs []core.BlindedSignature) (
 }
 
 // invalidateProofs will invalidate multiple proofs at once by persisting them into proof table
-func (l *Ledger) invalidateProofs(proofs []core.Proof) error {
+func (l *Ledger) invalidateProofs(proofs []cashu.Proof) error {
 	proofMsgs := make(map[string]struct{})
 	// get unique proofs
 	for _, proof := range proofs {
@@ -375,7 +376,7 @@ if not all( [self._verify_proof(p) for p in proofs]):
 raise Exception ("could not verify proofs.")
 */
 // melt will meld proofs
-func (l *Ledger) Melt(proofs []core.Proof, amount int64, invoice string) (status bool, preimage string, err error) {
+func (l *Ledger) Melt(proofs []cashu.Proof, amount int64, invoice string) (status bool, preimage string, err error) {
 	var total int64
 	for _, proof := range proofs {
 		// verify every proof and sum total amount
@@ -409,8 +410,8 @@ func (l *Ledger) Melt(proofs []core.Proof, amount int64, invoice string) (status
 }
 
 // split will split proofs. creates BlindedSignatures from BlindedMessages.
-func (l *Ledger) Split(proofs []core.Proof, amount int64, outputs []core.BlindedMessage) ([]core.BlindedSignature, []core.BlindedSignature, error) {
-	total := lo.SumBy[core.Proof](proofs, func(p core.Proof) int64 {
+func (l *Ledger) Split(proofs []cashu.Proof, amount int64, outputs []cashu.BlindedMessage) ([]cashu.BlindedSignature, []cashu.BlindedSignature, error) {
+	total := lo.SumBy[cashu.Proof](proofs, func(p cashu.Proof) int64 {
 		return p.Amount
 	})
 	if amount > total {
@@ -520,7 +521,7 @@ func (l *Ledger) Split(proofs []core.Proof, amount int64, outputs []core.Blinded
 	return fstPromise, sendPromise, nil
 }
 
-func verifySecretCriteria(proofs []core.Proof) error {
+func verifySecretCriteria(proofs []cashu.Proof) error {
 	for _, proof := range proofs {
 		if proof.Secret == "" {
 			return fmt.Errorf("secrets do not match criteria.")

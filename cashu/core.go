@@ -1,4 +1,4 @@
-package core
+package cashu
 
 import (
 	"encoding/hex"

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/gohumble/cashu-feni/core"
+	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/gohumble/cashu-feni/mint"
 	"net/http"
 )
@@ -11,9 +11,9 @@ type Mint struct {
 	Ledger     *mint.Ledger
 }
 
-type MintResponse core.BlindedMessages
+type MintResponse cashu.BlindedMessages
 type MintRequest struct {
-	BlindedMessages core.BlindedMessages `json:"blinded_messages"`
+	BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
 }
 type MeltResponse struct {
 	Paid     bool   `json:"paid"`
@@ -31,12 +31,12 @@ type GetMintResponse struct {
 }
 
 type MeltRequest struct {
-	Proofs  core.Proofs
+	Proofs  cashu.Proofs
 	Amount  int64
 	Invoice string
 }
 type CheckRequest struct {
-	Proofs core.Proofs
+	Proofs cashu.Proofs
 }
 
 type CheckFeesResponse struct {
@@ -46,14 +46,14 @@ type CheckFeesRequest struct {
 	Pr string `json:"pr"`
 }
 type SplitRequest struct {
-	Proofs  core.Proofs `json:"proofs"`
-	Amount  int64       `json:"amount"`
+	Proofs  cashu.Proofs `json:"proofs"`
+	Amount  int64        `json:"amount"`
 	Outputs struct {
-		BlindedMessages core.BlindedMessages `json:"blinded_messages"`
+		BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
 	} `json:"outputs"`
 	// todo -- remove output data in future version. This is only used for backward compatibility
 	// check https://github.com/callebtc/cashu/pull/20
 	OutputData struct {
-		BlindedMessages core.BlindedMessages `json:"blinded_messages"`
+		BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
 	} `json:"output_data" swaggerignore:"true"`
 }

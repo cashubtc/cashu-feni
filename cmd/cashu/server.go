@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/gohumble/cashu-feni/cashu"
-	"github.com/gohumble/cashu-feni/core"
 	"github.com/gohumble/cashu-feni/db"
 	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/mint"
@@ -182,7 +181,7 @@ func (m Mint) mint(w http.ResponseWriter, r *http.Request) {
 	pr := r.URL.Query().Get("payment_hash")
 	amounts := make([]int64, 0)
 	B_s := make([]*secp256k1.PublicKey, 0)
-	blindedMessages := MintRequest{BlindedMessages: make(core.BlindedMessages, 0)}
+	blindedMessages := MintRequest{BlindedMessages: make(cashu.BlindedMessages, 0)}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&blindedMessages)
 	if err != nil {

@@ -2,7 +2,7 @@ package db
 
 import (
 	"errors"
-	"github.com/gohumble/cashu-feni/core"
+	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/gohumble/cashu-feni/lightning"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -43,11 +43,11 @@ func open(dialector gorm.Dialector) *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-	err = orm.AutoMigrate(&core.Proof{})
+	err = orm.AutoMigrate(&cashu.Proof{})
 	if err != nil {
 		panic(err)
 	}
-	err = orm.AutoMigrate(&core.Promise{})
+	err = orm.AutoMigrate(&cashu.Promise{})
 	if err != nil {
 		panic(err)
 	}
@@ -55,19 +55,19 @@ func open(dialector gorm.Dialector) *gorm.DB {
 }
 
 // getUsedProofs reads all proofs from db
-func (s SqlDatabase) GetUsedProofs() []core.Proof {
-	proofs := make([]core.Proof, 0)
+func (s SqlDatabase) GetUsedProofs() []cashu.Proof {
+	proofs := make([]cashu.Proof, 0)
 	s.db.Find(&proofs)
 	return proofs
 }
 
 // invalidateProof will write proof to db
-func (s SqlDatabase) InvalidateProof(p core.Proof) error {
+func (s SqlDatabase) InvalidateProof(p cashu.Proof) error {
 	return s.db.Create(&p).Error
 }
 
 // storePromise will write promise to db
-func (s SqlDatabase) StorePromise(p core.Promise) error {
+func (s SqlDatabase) StorePromise(p cashu.Promise) error {
 	return s.db.Create(&p).Error
 }
 
