@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/btcutil"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/gohumble/cashu-feni/internal/core"
 	"github.com/gohumble/cashu-feni/internal/lightning"
+	"github.com/gohumble/cashu-feni/pkg/bitcoin"
 	decodepay "github.com/nbd-wtf/ln-decodepay"
 	"github.com/samber/lo"
 	"gorm.io/driver/sqlite"
@@ -17,6 +19,7 @@ import (
 	"path"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 const MaxOrder = 64
@@ -221,6 +224,18 @@ func (l *Ledger) verifyProof(proof core.Proof) (bool, error) {
 	return core.Verify(*secretKey, *C, proof.Secret), nil
 }
 
+func verifyScript(proof core.Proof) (addr *btcutil.AddressScriptHash, err error) {
+	if proof.Script == nil || proof.Script.Script == "" || proof.Script.Signature == "" {
+		if len(strings.Split(proof.Secret, "P2SH:")) == 2 {
+			return nil, fmt.Errorf("secret indicates a script but no script is present")
+		} else {
+			// secret indicates no script, so treat script as valid
+			return nil, nil
+		}
+	}
+	return bitcoin.VerifyScript(proof.Script.Script, proof.Script.Signature)
+}
+
 // verifyOutputs verify output data
 func verifyOutputs(total, amount int64, outputs []core.BlindedMessage) (bool, error) {
 	fstAmt, sndAmt := total-amount, amount
@@ -410,6 +425,23 @@ func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.Blinded
 		return nil, nil, err
 	}
 	var total int64
+	// verify script
+	for _, proof := range proofs {
+		addr, err := verifyScript(proof)
+		if err != nil {
+			return nil, nil, err
+		}
+		if addr != nil {
+			ss := strings.Split(proof.Secret, ":")
+			if len(ss) != 3 {
+				return nil, nil, fmt.Errorf("invlid script")
+			}
+			addrs := addr.String()
+			if ss[1] != addrs {
+				return nil, nil, fmt.Errorf("invlid script")
+			}
+		}
+	}
 	// verify proofs
 	for _, proof := range proofs {
 		vp, err := l.verifyProof(proof)
