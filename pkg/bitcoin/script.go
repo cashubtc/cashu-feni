@@ -2,8 +2,6 @@ package bitcoin
 
 import (
 	"encoding/base64"
-	"fmt"
-	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -64,13 +62,10 @@ func pushDataScript(items ...[]byte) []byte {
 	}
 	return script
 }
-func Step3BobVerifyScript(txInSignature, txInRedeemScript []byte, tx *wire.MsgTx) bool {
+func Step3BobVerifyScript(txInSignature, txInRedeemScript []byte, tx *wire.MsgTx) error {
 	txInScriptPubKey, err := input.GenerateP2SH(txInRedeemScript)
 	if err != nil {
-		return false
-	}
-	if err != nil {
-		panic(err)
+		return err
 	}
 	// set the received signature script
 	tx.TxIn[0].SignatureScript = txInSignature
@@ -84,33 +79,16 @@ func Step3BobVerifyScript(txInSignature, txInRedeemScript []byte, tx *wire.MsgTx
 				txInRedeemScript, int64(0.0005*COIN),
 			))
 		if err != nil {
-			panic(err)
+			return err
 		}
 		err = vm.Execute()
 		if err != nil {
-			return false
+			return err
 		}
 	}
-	return true
+	return nil
 }
 
-func Step3BobVerifyScript_(txInSignature, txInRedeemScript []byte, tx *wire.MsgTx) bool {
-	txInScriptPubKey, err := txscript.NewScriptBuilder().AddOp(txscript.OP_HASH160).AddData(btcutil.Hash160(txInRedeemScript)).AddOp(txscript.OP_EQUAL).Script()
-
-	utxo := blockchain.NewUtxoViewpoint()
-	btx := btcutil.NewTx(tx)
-	gg := wire.NewMsgTx(0)
-	gg.AddTxOut(&wire.TxOut{PkScript: txInScriptPubKey, Value: 0})
-	utcoTx := btcutil.NewTx(gg)
-	utxo.AddTxOut(utcoTx, 1, 0)
-
-	err = blockchain.ValidateTransactionScripts(btx, utxo,
-		txscript.ScriptBip16, nil, nil)
-	if err != nil {
-		return false
-	}
-	return true
-}
 func VerifyScript(script, signature string) (txInP2SHAddress *btcutil.AddressScriptHash, err error) {
 	// decode payloads
 	pubScriptKey, err := base64.URLEncoding.DecodeString(script)
@@ -132,9 +110,9 @@ func VerifyScript(script, signature string) (txInP2SHAddress *btcutil.AddressScr
 		return
 	}
 	// verify the script
-	valid := Step3BobVerifyScript(sig, pubScriptKey, tx)
-	if !valid {
-		return nil, fmt.Errorf("invalid script")
+	err = Step3BobVerifyScript(sig, pubScriptKey, tx)
+	if err != nil {
+		return nil, err
 	}
 	return
 }
