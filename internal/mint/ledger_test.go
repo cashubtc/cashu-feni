@@ -43,7 +43,7 @@ func Test_Steps(t *testing.T) {
 	C_ := core.SecondStepBob(*B_, *a)
 	C := core.ThirdStepAlice(*C_, *r, *A)
 	fmt.Printf("secretMessage: %s\n", secretMessage)
-	if !core.Verify(*a, *C, secretMessage) {
+	if !core.Verify(*a, *C, secretMessage, core.HashToCurve) {
 		t.Errorf("verify(a, C, secret_msg) == %v \n", false)
 		return
 	}
@@ -54,11 +54,11 @@ func Test_Steps(t *testing.T) {
 		panic(err)
 	}
 	CjKey := secp256k1.NewPublicKey(&result.X, &result.Y)
-	if core.Verify(*a, *CjKey, secretMessage) {
+	if core.Verify(*a, *CjKey, secretMessage, core.HashToCurve) {
 		t.Errorf("verify(a, C + C, secret_msg) should be false == %v\n", true)
 		return
 	}
-	if core.Verify(*a, *A, secretMessage) {
+	if core.Verify(*a, *A, secretMessage, core.HashToCurve) {
 		t.Errorf("verify(a, A, secret_msg) should be false ==  %v\n", true)
 		return
 	}

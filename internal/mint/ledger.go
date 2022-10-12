@@ -476,7 +476,7 @@ func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.Blinded
 	}
 	// _verify_secret_criteria
 	if err = verifySecretCriteria(proofs); err != nil {
-		return nil, nil, fmt.Errorf("secrets do not match criteria. %v", err)
+		return nil, nil, fmt.Errorf("no secret in proof.")
 	}
 	// check for duplicates
 	if !verifyNoDuplicates(proofs, outputs) {
