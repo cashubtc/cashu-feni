@@ -302,7 +302,7 @@ func (m Mint) check(w http.ResponseWriter, r *http.Request) {
 
 // split is the http handler function for POST /split
 // @Summary Split your proofs
-// @Description Requetst a set of tokens with amount "total" to be split into two newly minted sets with amount "split" and "total-split".
+// @Description Requests a set of tokens with amount "total" to be split into two newly minted sets with amount "split" and "total-split".
 // @Produce  json
 // @Success 200 {object} SplitResponse
 // @Failure 500 {object} ErrorResponse

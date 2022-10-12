@@ -2,26 +2,35 @@ package core
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 )
 
-/*
-def hash_to_curve(message: bytes):
-    """Generates a point from the message hash and checks if the point lies on the curve.
-    If it does not, it tries computing a new point from the hash."""
-    point = None
-    msg_to_hash = message
-    while point is None:
-        try:
-            _hash = hashlib.sha256(msg_to_hash).digest()
-            point = PublicKey(b"\x02" + _hash, raw=True)
-        except:
-            msg_to_hash = _hash
-    return point
+// backwards compatibility with old hash_to_curve < 0.3.3
+// LegacyHashToCurve will generate a public key on the curve.
+func LegacyHashToCurve(secretMessage []byte) *secp256k1.PublicKey {
+	msg := secretMessage
+	for {
+		hasher := sha256.New()
+		hasher.Write(msg)
+		h := hex.EncodeToString(hasher.Sum(nil))
+		hash := []byte(h)[:33]
+		hash[0] = 0x02
+		pub, err := secp256k1.ParsePubKey(hash)
+		if err != nil {
+			msg = hash
+			continue
+		}
+		if pub.IsOnCurve() {
+			return pub
+		}
+		continue
+	}
 
-*/
-// hashToCurve will generate a public key on the curve.
-func hashToCurve(secretMessage []byte) *secp256k1.PublicKey {
+}
+
+// HashToCurve will generate a public key on the curve.
+func HashToCurve(secretMessage []byte) *secp256k1.PublicKey {
 	msg := secretMessage
 	for {
 		hasher := sha256.New()
@@ -37,12 +46,11 @@ func hashToCurve(secretMessage []byte) *secp256k1.PublicKey {
 		}
 		continue
 	}
-
 }
 
 // FirstStepAlice creates blinded secrets and produces outputs
 func FirstStepAlice(secretMessage string) (*secp256k1.PublicKey, *secp256k1.PrivateKey) {
-	Y := hashToCurve([]byte(secretMessage))
+	Y := HashToCurve([]byte(secretMessage))
 	r, err := secp256k1.GeneratePrivateKey()
 	if err != nil {
 		panic(err)
@@ -80,10 +88,12 @@ func ThirdStepAlice(c_ secp256k1.PublicKey, r secp256k1.PrivateKey, A secp256k1.
 }
 
 // Verify that secret was signed by bob.
-func Verify(a secp256k1.PrivateKey, c secp256k1.PublicKey, secretMessage string) bool {
+// cuveFunc should be legacyHashToCurve for client version < 0.3.3
+// this could be removed and replaced with static invocation of hashToCurve
+func Verify(a secp256k1.PrivateKey, c secp256k1.PublicKey, secretMessage string, curveFunc func(msg []byte) *secp256k1.PublicKey) bool {
 	var Y, Result secp256k1.JacobianPoint
 	k := []byte(secretMessage)
-	y := hashToCurve(k)
+	y := curveFunc(k)
 	y.AsJacobian(&Y)
 	secp256k1.ScalarMultNonConst(&a.Key, &Y, &Result)
 	Result.ToAffine()

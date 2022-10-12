@@ -1,7 +1,6 @@
 package bitcoin
 
 import (
-	"encoding/base64"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -89,16 +88,7 @@ func Step3BobVerifyScript(txInSignature, txInRedeemScript []byte, tx *wire.MsgTx
 	return nil
 }
 
-func VerifyScript(script, signature string) (txInP2SHAddress *btcutil.AddressScriptHash, err error) {
-	// decode payloads
-	pubScriptKey, err := base64.URLEncoding.DecodeString(script)
-	if err != nil {
-		return
-	}
-	sig, err := base64.URLEncoding.DecodeString(signature)
-	if err != nil {
-		return
-	}
+func VerifyScript(pubScriptKey, sig []byte) (txInP2SHAddress *btcutil.AddressScriptHash, err error) {
 	// create p2sh address from public script key
 	txInP2SHAddress, err = Step1CarolCreateP2SHAddress(pubScriptKey)
 	if err != nil {

@@ -2,6 +2,7 @@ package mint
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -208,20 +209,24 @@ func (l *Ledger) generatePromises(amounts []int64, keys []*secp256k1.PublicKey) 
 }
 
 // verifyProof will verify proof
-func (l *Ledger) verifyProof(proof core.Proof) (bool, error) {
+func (l *Ledger) verifyProof(proof core.Proof) error {
 	if !l.checkSpendable(proof) {
-		return false, fmt.Errorf("tokens already spent. Secret: %s", proof.Secret)
+		return fmt.Errorf("tokens already spent. Secret: %s", proof.Secret)
 	}
 	secretKey := l.privateKeys[proof.Amount]
 	pubKey, err := hex.DecodeString(proof.C)
 	if err != nil {
-		return false, err
+		return err
 	}
 	C, err := secp256k1.ParsePubKey(pubKey)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return core.Verify(*secretKey, *C, proof.Secret), nil
+	if core.Verify(*secretKey, *C, proof.Secret, core.HashToCurve) ||
+		core.Verify(*secretKey, *C, proof.Secret, core.LegacyHashToCurve) {
+		return nil
+	}
+	return fmt.Errorf("could not verify proofs.")
 }
 
 func verifyScript(proof core.Proof) (addr *btcutil.AddressScriptHash, err error) {
@@ -233,7 +238,16 @@ func verifyScript(proof core.Proof) (addr *btcutil.AddressScriptHash, err error)
 			return nil, nil
 		}
 	}
-	return bitcoin.VerifyScript(proof.Script.Script, proof.Script.Signature)
+	// decode payloads
+	pubScriptKey, err := base64.URLEncoding.DecodeString(proof.Script.Script)
+	if err != nil {
+		return
+	}
+	sig, err := base64.URLEncoding.DecodeString(proof.Script.Signature)
+	if err != nil {
+		return
+	}
+	return bitcoin.VerifyScript(pubScriptKey, sig)
 }
 
 // verifyOutputs verify output data
@@ -392,12 +406,9 @@ func (l *Ledger) melt(proofs []core.Proof, amount int64, invoice string) (status
 	var total int64
 	for _, proof := range proofs {
 		// verify every proof and sum total amount
-		ok, err := l.verifyProof(proof)
+		err = l.verifyProof(proof)
 		if err != nil {
 			return false, "", err
-		}
-		if !ok {
-			return false, "", fmt.Errorf("could not verify proofs")
 		}
 		total += proof.Amount
 	}
@@ -443,6 +454,7 @@ func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.Blinded
 		addr, err := verifyScript(proof)
 		if err != nil {
 			// Python test adoption
+			// this should be removed in future versions
 			switch err.Error() {
 			case "pay to script hash is not push only":
 				return nil, nil, fmt.Errorf("('%v', EvalScriptError('EvalScript: OP_RETURN called'))", fmt.Errorf("Script evaluation failed:"))
@@ -462,6 +474,10 @@ func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.Blinded
 			}
 		}
 	}
+	// _verify_secret_criteria
+	if err = verifySecretCriteria(proofs); err != nil {
+		return nil, nil, fmt.Errorf("secrets do not match criteria. %v", err)
+	}
 	// check for duplicates
 	if !verifyNoDuplicates(proofs, outputs) {
 		return nil, nil, fmt.Errorf("duplicate proofs or promises.")
@@ -469,12 +485,9 @@ func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.Blinded
 
 	// verify proofs
 	for _, proof := range proofs {
-		vp, err := l.verifyProof(proof)
+		err := l.verifyProof(proof)
 		if err != nil {
 			return nil, nil, err
-		}
-		if !vp {
-			return nil, nil, fmt.Errorf("no secret in proof.")
 		}
 	}
 
@@ -532,4 +545,13 @@ func (l *Ledger) split(proofs []core.Proof, amount int64, outputs []core.Blinded
 		return nil, nil, err
 	}
 	return fstPromise, sendPromise, nil
+}
+
+func verifySecretCriteria(proofs []core.Proof) error {
+	for _, proof := range proofs {
+		if proof.Secret == "" {
+			return fmt.Errorf("secrets do not match criteria.")
+		}
+	}
+	return nil
 }
