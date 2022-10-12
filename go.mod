@@ -3,10 +3,14 @@ module github.com/gohumble/cashu-feni
 go 1.19
 
 require (
+	github.com/btcsuite/btcd v0.23.2
+	github.com/btcsuite/btcd/btcutil v1.1.1
+	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0
 	github.com/gorilla/mux v1.8.0
 	github.com/imroc/req v0.3.2
 	github.com/jinzhu/configor v1.2.1
+	github.com/lightningnetwork/lnd v0.15.0-beta
 	github.com/nbd-wtf/ln-decodepay v1.11.1
 	github.com/samber/lo v1.29.0
 	github.com/sirupsen/logrus v1.9.0
@@ -22,11 +26,8 @@ require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/aead/siphash v1.0.1 // indirect
-	github.com/btcsuite/btcd v0.23.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
-	github.com/btcsuite/btcd/btcutil v1.1.1 // indirect
 	github.com/btcsuite/btcd/btcutil/psbt v1.1.4 // indirect
-	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1 // indirect
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f // indirect
 	github.com/btcsuite/btcwallet v0.15.1 // indirect
 	github.com/btcsuite/btcwallet/wallet/txauthor v1.2.3 // indirect
@@ -50,7 +51,6 @@ require (
 	github.com/kkdai/bstream v1.0.0 // indirect
 	github.com/lightninglabs/gozmq v0.0.0-20191113021534-d20a764486bf // indirect
 	github.com/lightninglabs/neutrino v0.14.2 // indirect
-	github.com/lightningnetwork/lnd v0.15.0-beta // indirect
 	github.com/lightningnetwork/lnd/clock v1.1.0 // indirect
 	github.com/lightningnetwork/lnd/queue v1.1.0 // indirect
 	github.com/lightningnetwork/lnd/ticker v1.1.0 // indirect

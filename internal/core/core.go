@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/hex"
 	"time"
 )
 
@@ -9,9 +10,20 @@ type Proof struct {
 	Secret       string `json:"secret" gorm:"primaryKey"`
 	C            string `json:"C"`
 	reserved     bool
+	Script       *P2SHScript `gorm:"-" json:"script"`
 	sendId       string
 	timeCreated  time.Time
 	timeReserved time.Time
+}
+
+type P2SHScript struct {
+	Script    string
+	Signature string
+	Address   string
+}
+
+func (p Proof) Decode() ([]byte, error) {
+	return hex.DecodeString(p.C)
 }
 
 type Proofs []Proof
