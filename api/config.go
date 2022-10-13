@@ -1,4 +1,4 @@
-package mint
+package api
 
 // Will handle the yaml configuration for the proxy.
 import (

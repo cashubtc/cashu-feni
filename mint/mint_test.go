@@ -1,4 +1,4 @@
-package ledger
+package mint
 
 import (
 	"bytes"

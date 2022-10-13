@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/gohumble/cashu-feni/api"
 	_ "github.com/gohumble/cashu-feni/docs"
-	"github.com/gohumble/cashu-feni/mint"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/ecslogrus"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -16,12 +16,12 @@ import (
 func main() {
 	initializeLogger()
 	log.Info("starting (feni) cashu mint server")
-	m := mint.New()
+	m := api.New()
 	m.StartServer()
 }
 
 func initializeLogger() {
-	level, err := log.ParseLevel(mint.Config.LogLevel)
+	level, err := log.ParseLevel(api.Config.LogLevel)
 	if err != nil {
 		level = log.TraceLevel
 	}
