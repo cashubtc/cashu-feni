@@ -1,0 +1,25 @@
+version: "3.4"
+services:
+  cashu-feni:
+    build:
+      context: ../.
+      dockerfile: Dockerfile
+    restart: always
+    hostname: cashu-feni.docker
+    network_mode: bridge
+    user: root
+    volumes:
+      - "./config-cashu-feni.yaml:/app/config.yaml"
+      - "./data-cashu-feni:/app/data"
+    ports:
+      - "3338:3338"
+  cashu-lnbits:
+    image: "gohumble/lnbits:latest"
+    restart: always
+    hostname: lnbits.docker
+    network_mode: bridge
+    volumes:
+      - "./data-lnbits:/app/data"
+      - "./.env.lnbits:/app/.env"
+    ports:
+      - "5000:5000"
