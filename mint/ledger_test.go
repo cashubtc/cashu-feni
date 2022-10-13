@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+	"github.com/gohumble/cashu-feni/crypto"
 	"reflect"
 	"testing"
 )
