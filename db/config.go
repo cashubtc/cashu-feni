@@ -11,14 +11,18 @@ import (
 
 type Configuration struct {
 	Database struct {
-		MySql *struct {
-			Host string `json:"host" yaml:"host"`
-			Port string `json:"port" yaml:"port"`
-		}
-		Sqlite *struct {
-			Path string `json:"path" yaml:"path"`
-		} `json:"sqlite" yaml:"sqlite"`
+		MySql  *MySqlConfig
+		Sqlite *SqliteConfig `json:"sqlite" yaml:"sqlite"`
 	} `json:"database" yaml:"database"`
+}
+
+type SqliteConfig struct {
+	Path string `json:"path" yaml:"path"`
+}
+
+type MySqlConfig struct {
+	Host string `json:"host" yaml:"host"`
+	Port string `json:"port" yaml:"port"`
 }
 
 var Config Configuration
@@ -27,7 +31,7 @@ const name = "config.yaml"
 
 func init() {
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
-		Config.Database.Sqlite.Path = "data"
+		Config.Database.Sqlite = &SqliteConfig{Path: "data"}
 		cfg, err := json.Marshal(Config)
 		if err != nil {
 			panic(err)
