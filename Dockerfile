@@ -9,13 +9,13 @@ RUN apk --no-cache add git alpine-sdk build-base gcc
 WORKDIR /build
 
 
-RUN go build -o dist/cashu cmd/cashu/mint.go
+RUN go build -o cashu-feni cmd/cashu/mint.go
 
 FROM alpine:latest
 
 RUN adduser -S -D -H -h /app feni
 
-COPY --from=builder /build/dist/cashu /app/
+COPY --from=builder /build/cashu/cashu-feni /app/
 
 RUN chown -R feni /app
 
@@ -25,4 +25,4 @@ EXPOSE 3338
 
 WORKDIR /app
 
-CMD ["./cashu"]
+CMD ["./cashu-feni"]

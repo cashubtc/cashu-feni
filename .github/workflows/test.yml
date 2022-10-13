@@ -17,7 +17,7 @@ jobs:
           go-version: 1.19
 
       - name: Build
-        run: go build -v ./...
+        run: go build -v -o cashu-feni cmd/cashu/mint.go
       - name: Run Cashu Feni
         run: nohup go run . &
       - name: Golang run tests
