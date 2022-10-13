@@ -31,6 +31,5 @@ jobs:
           distribution: goreleaser
           version: latest
           args: release --rm-dist
-          main: ./cmd/cashu/
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
