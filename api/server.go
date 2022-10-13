@@ -1,10 +1,8 @@
 package api
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/gohumble/cashu-feni/db"
 	"github.com/gohumble/cashu-feni/mint"
@@ -70,30 +68,30 @@ func LoggingMiddleware(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (m Api) StartServer() {
+func (api Api) StartServer() {
 	if Config.Mint.Tls.Enabled {
-		log.Println(m.HttpServer.ListenAndServeTLS(Config.Mint.Tls.CertFile, Config.Mint.Tls.KeyFile))
+		log.Println(api.HttpServer.ListenAndServeTLS(Config.Mint.Tls.CertFile, Config.Mint.Tls.KeyFile))
 	} else {
-		log.Println(m.HttpServer.ListenAndServe())
+		log.Println(api.HttpServer.ListenAndServe())
 	}
 }
-func newRouter(m Api) *mux.Router {
+func newRouter(a Api) *mux.Router {
 	router := mux.NewRouter()
 	// route to receive mint public keys
-	router.HandleFunc("/keys", Use(m.getKeys, LoggingMiddleware)).Methods(http.MethodGet)
-	router.HandleFunc("/keysets", Use(m.getKeysets, LoggingMiddleware)).Methods(http.MethodGet)
+	router.HandleFunc("/keys", Use(a.getKeys, LoggingMiddleware)).Methods(http.MethodGet)
+	router.HandleFunc("/keysets", Use(a.getKeysets, LoggingMiddleware)).Methods(http.MethodGet)
 	// route to get mint (create tokens)
-	router.HandleFunc("/mint", Use(m.getMint, LoggingMiddleware)).Methods(http.MethodGet)
+	router.HandleFunc("/mint", Use(a.getMint, LoggingMiddleware)).Methods(http.MethodGet)
 	// route to real mint (with LIGHTNING enabled)
-	router.HandleFunc("/mint", Use(m.mint, LoggingMiddleware)).Methods(http.MethodPost)
+	router.HandleFunc("/mint", Use(a.mint, LoggingMiddleware)).Methods(http.MethodPost)
 	// route to burn / melt a tx
-	router.HandleFunc("/melt", Use(m.melt, LoggingMiddleware)).Methods(http.MethodPost)
+	router.HandleFunc("/melt", Use(a.melt, LoggingMiddleware)).Methods(http.MethodPost)
 	// route to check spendable proofs
-	router.HandleFunc("/check", Use(m.check, LoggingMiddleware)).Methods(http.MethodPost)
+	router.HandleFunc("/check", Use(a.check, LoggingMiddleware)).Methods(http.MethodPost)
 	// route to check routing fees
-	router.HandleFunc("/checkfees", Use(m.checkFee, LoggingMiddleware)).Methods(http.MethodPost)
+	router.HandleFunc("/checkfees", Use(a.checkFee, LoggingMiddleware)).Methods(http.MethodPost)
 	// route to split proofs (send money)
-	router.HandleFunc("/split", Use(m.split, LoggingMiddleware)).Methods(http.MethodGet, http.MethodPost)
+	router.HandleFunc("/split", Use(a.split, LoggingMiddleware)).Methods(http.MethodGet, http.MethodPost)
 	appendSwaggoHandler(router)
 	return router
 }
@@ -114,7 +112,7 @@ func appendSwaggoHandler(router *mux.Router) {
 // @Router /checkfees [post]
 // @Param CheckFeesRequest body CheckFeesRequest true "Model containing lightning invoice"
 // @Tags POST
-func (m Api) checkFee(w http.ResponseWriter, r *http.Request) {
+func (api Api) checkFee(w http.ResponseWriter, r *http.Request) {
 	feesRequest := CheckFeesRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&feesRequest)
@@ -122,7 +120,7 @@ func (m Api) checkFee(w http.ResponseWriter, r *http.Request) {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	fee, err := m.Mint.CheckFees(feesRequest.Pr)
+	fee, err := api.Mint.CheckFees(feesRequest.Pr)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -148,13 +146,13 @@ func (m Api) checkFee(w http.ResponseWriter, r *http.Request) {
 // @Router /mint [get]
 // @Param        amount    query     string  false  "amount of the mint"
 // @Tags GET
-func (m Api) getMint(w http.ResponseWriter, r *http.Request) {
+func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 	amount := r.URL.Query().Get("amount")
 	ai, err := strconv.Atoi(amount)
 	if err != nil {
 		log.Errorf("error checking amount")
 	}
-	invoice, err := m.Mint.RequestMint(int64(ai))
+	invoice, err := api.Mint.RequestMint(int64(ai))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -186,28 +184,17 @@ func (m Api) getMint(w http.ResponseWriter, r *http.Request) {
 // @Param core.BlindedMessages body core.BlindedMessages true "Model containing proofs to mint"
 // @Param        payment_hash    query     string  false  "payment hash for the mint"
 // @Tags POST
-func (m Api) mint(w http.ResponseWriter, r *http.Request) {
+func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 	pr := r.URL.Query().Get("payment_hash")
 	amounts := make([]int64, 0)
-	B_s := make([]*secp256k1.PublicKey, 0)
-	blindedMessages := MintRequest{BlindedMessages: make(cashu.BlindedMessages, 0)}
+	mintRequest := MintRequest{BlindedMessages: make(cashu.BlindedMessages, 0)}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&blindedMessages)
+	err := decoder.Decode(&mintRequest)
 	if err != nil {
 		panic(err)
 	}
-	for _, msg := range blindedMessages.BlindedMessages {
-		amounts = append(amounts, msg.Amount)
-		hkey := make([]byte, 0)
-		hkey, err = hex.DecodeString(msg.B_)
-		publicKey, err := secp256k1.ParsePubKey(hkey)
-		if err != nil {
-			responseError(w, cashu.NewErrorResponse(err))
-			return
-		}
-		B_s = append(B_s, publicKey)
-	}
-	promises, err := m.Mint.Mint(B_s, amounts, pr)
+
+	promises, err := api.Mint.Mint(mintRequest.BlindedMessages, amounts, pr)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -233,14 +220,14 @@ func (m Api) mint(w http.ResponseWriter, r *http.Request) {
 // @Router /melt [post]
 // @Param MeltRequest body MeltRequest true "Model containing proofs to melt"
 // @Tags POST
-func (m Api) melt(w http.ResponseWriter, r *http.Request) {
+func (api Api) melt(w http.ResponseWriter, r *http.Request) {
 	payload := MeltRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&payload)
 	if err != nil {
 		panic(err)
 	}
-	payment, err := m.Mint.Melt(payload.Proofs, payload.Amount, payload.Invoice)
+	payment, err := api.Mint.Melt(payload.Proofs, payload.Amount, payload.Invoice)
 	if err != nil {
 		log.WithFields(log.Fields{"error.message": err.Error()}).Errorf("error in melt")
 	}
@@ -265,8 +252,8 @@ func (m Api) melt(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} ErrorResponse
 // @Router /keys [get]
 // @Tags GET
-func (m Api) getKeys(w http.ResponseWriter, r *http.Request) {
-	key, err := json.Marshal(m.Mint.GetPublicKeys())
+func (api Api) getKeys(w http.ResponseWriter, r *http.Request) {
+	key, err := json.Marshal(api.Mint.GetPublicKeys())
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -278,7 +265,7 @@ func (m Api) getKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func (m Api) getKeysets(w http.ResponseWriter, r *http.Request) {
+func (api Api) getKeysets(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"keysets":{}}`))
 }
 
@@ -291,14 +278,14 @@ func (m Api) getKeysets(w http.ResponseWriter, r *http.Request) {
 // @Router /check [post]
 // @Param CheckRequest body CheckRequest true "Model containing proofs to check"
 // @Tags POST
-func (m Api) check(w http.ResponseWriter, r *http.Request) {
+func (api Api) check(w http.ResponseWriter, r *http.Request) {
 	payload := CheckRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&payload)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 	}
-	spendable := m.Mint.CheckSpendables(payload.Proofs)
+	spendable := api.Mint.CheckSpendables(payload.Proofs)
 	res, err := json.Marshal(spendable)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
@@ -320,7 +307,7 @@ func (m Api) check(w http.ResponseWriter, r *http.Request) {
 // @Router /split [post]
 // @Param SplitRequest body SplitRequest true "Model containing proofs to split"
 // @Tags POST
-func (m Api) split(w http.ResponseWriter, r *http.Request) {
+func (api Api) split(w http.ResponseWriter, r *http.Request) {
 	payload := SplitRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&payload)
@@ -335,7 +322,7 @@ func (m Api) split(w http.ResponseWriter, r *http.Request) {
 		payload.Outputs.BlindedMessages = payload.OutputData.BlindedMessages
 	}
 	outputs := payload.Outputs
-	fstPromise, sendPromise, err := m.Mint.Split(proofs, amount, outputs.BlindedMessages)
+	fstPromise, sendPromise, err := api.Mint.Split(proofs, amount, outputs.BlindedMessages)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return

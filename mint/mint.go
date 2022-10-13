@@ -174,7 +174,18 @@ func (l *Mint) payLightningInvoice(pr string, feeLimitMSat int64) (lightning.Pay
 }
 
 // mint generates promises for keys. checks lightning invoice before creating promise.
-func (l *Mint) Mint(keys []*secp256k1.PublicKey, amounts []int64, pr string) ([]cashu.BlindedSignature, error) {
+func (l *Mint) Mint(messages cashu.BlindedMessages, amounts []int64, pr string) ([]cashu.BlindedSignature, error) {
+	publicKeys := make([]*secp256k1.PublicKey, 0)
+	for _, msg := range messages {
+		amounts = append(amounts, msg.Amount)
+		hkey := make([]byte, 0)
+		hkey, err := hex.DecodeString(msg.B_)
+		publicKey, err := secp256k1.ParsePubKey(hkey)
+		if err != nil {
+			return nil, err
+		}
+		publicKeys = append(publicKeys, publicKey)
+	}
 	// if the client is not nil, ledger is running on lightning
 	if l.client != nil {
 		paid, err := l.checkLightningInvoice(amounts, pr)
@@ -186,7 +197,7 @@ func (l *Mint) Mint(keys []*secp256k1.PublicKey, amounts []int64, pr string) ([]
 		}
 	}
 	promises := make([]cashu.BlindedSignature, 0)
-	for i, key := range keys {
+	for i, key := range publicKeys {
 		sig, err := l.generatePromise(amounts[i], key)
 		if err != nil {
 			return nil, err
