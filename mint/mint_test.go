@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/gohumble/cashu-feni/internal/core"
+	"github.com/gohumble/cashu-feni/crypto"
 	"reflect"
 	"testing"
 )
@@ -39,11 +39,11 @@ func Test_Steps(t *testing.T) {
 	}
 	A := a.PubKey()
 	secretMessage := "HI"
-	B_, r := core.FirstStepAlice(secretMessage)
-	C_ := core.SecondStepBob(*B_, *a)
-	C := core.ThirdStepAlice(*C_, *r, *A)
+	B_, r := crypto.FirstStepAlice(secretMessage)
+	C_ := crypto.SecondStepBob(*B_, *a)
+	C := crypto.ThirdStepAlice(*C_, *r, *A)
 	fmt.Printf("secretMessage: %s\n", secretMessage)
-	if !core.Verify(*a, *C, secretMessage, core.HashToCurve) {
+	if !crypto.Verify(*a, *C, secretMessage, crypto.HashToCurve) {
 		t.Errorf("verify(a, C, secret_msg) == %v \n", false)
 		return
 	}
@@ -54,11 +54,11 @@ func Test_Steps(t *testing.T) {
 		panic(err)
 	}
 	CjKey := secp256k1.NewPublicKey(&result.X, &result.Y)
-	if core.Verify(*a, *CjKey, secretMessage, core.HashToCurve) {
+	if crypto.Verify(*a, *CjKey, secretMessage, crypto.HashToCurve) {
 		t.Errorf("verify(a, C + C, secret_msg) should be false == %v\n", true)
 		return
 	}
-	if core.Verify(*a, *A, secretMessage, core.HashToCurve) {
+	if crypto.Verify(*a, *A, secretMessage, crypto.HashToCurve) {
 		t.Errorf("verify(a, A, secret_msg) should be false ==  %v\n", true)
 		return
 	}

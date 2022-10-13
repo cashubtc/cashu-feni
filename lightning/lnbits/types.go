@@ -1,7 +1,7 @@
-package lightning
+package lnbits
 
 import (
-	"github.com/gohumble/cashu-feni/internal/cashu"
+	"encoding/json"
 	"github.com/imroc/req"
 )
 
@@ -57,7 +57,7 @@ type Wallet struct {
 	User     string `json:"user"`
 }
 
-type Payment struct {
+type PaymentDetails struct {
 	CheckingID    string      `json:"checking_id"`
 	Pending       bool        `json:"pending"`
 	Amount        int64       `json:"amount"`
@@ -80,13 +80,48 @@ type Invoice struct {
 }
 
 func (i Invoice) String() string {
-	return cashu.ToJson(i)
+	b, err := json.Marshal(i)
+	if err != nil {
+		return err.Error()
+	}
+	return string(b)
+
+}
+func (i *Invoice) SetHash(h string) {
+	i.Hash = h
+}
+
+func (i *Invoice) GetHash() string {
+	return i.Hash
+}
+func (i *Invoice) GetPaymentRequest() string {
+	return i.Pr
+}
+func (i *Invoice) SetIssued(issued bool) {
+	i.Issued = issued
+}
+
+func (i *Invoice) SetAmount(amount int64) {
+	i.Amount = amount
+}
+func (i *Invoice) GetAmount() int64 {
+	return i.Amount
+}
+func (i *Invoice) IsIssued() bool {
+	return i.Issued
 }
 
 type LNbitsPayment struct {
-	Paid     bool    `json:"paid"`
-	Preimage string  `json:"preimage"`
-	Details  Payment `json:"details,omitempty"`
+	Paid     bool           `json:"paid"`
+	Preimage string         `json:"preimage"`
+	Details  PaymentDetails `json:"details,omitempty"`
 }
 
-type Payments []Payment
+func (p LNbitsPayment) IsPaid() bool {
+	return p.Paid
+}
+func (p LNbitsPayment) GetPreimage() string {
+	return p.Preimage
+}
+
+type Payments []PaymentDetails

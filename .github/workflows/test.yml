@@ -3,7 +3,7 @@ name: tests
 on: [push, pull_request]
 
 jobs:
-  poetry:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -15,12 +15,11 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: 1.19
-
       - name: Build
-        run: go build -v ./...
-      - name: Run
-        run: nohup go run . &
-      - name: Test
+        run: go build -v -o cashu-feni cmd/cashu/mint.go
+      - name: Run Cashu Feni
+        run: nohup go run cmd/cashu/mint.go &
+      - name: Golang run tests
         run: go test -v ./...
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -38,7 +37,7 @@ jobs:
         run: |
           cd cashu
           poetry install --with dev
-      - name: Run tests
+      - name: Python run Poetry tests
         env:
           LIGHTNING: False
           MINT_HOST: localhost
