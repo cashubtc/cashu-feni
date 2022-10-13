@@ -12,13 +12,15 @@ import (
 
 // Configuration for lnbits
 type Configuration struct {
-	Lnbits struct {
-		Enabled                bool    `json:"enabled" yaml:"enabled"`
-		LightningFeePercent    float64 `json:"lightning_fee_percent" yaml:"lightning_fee_percent"`
-		LightningReserveFeeMin float64 `json:"lightning_reserve_fee_min" yaml:"lightning_reserve_fee_min"`
-		AdminKey               string  `yaml:"admin_key"`
-		Url                    string  `yaml:"url"`
-	} `json:"lnbits" yaml:"lnbits"`
+	Lightning struct {
+		Enabled bool `json:"enabled" yaml:"enabled"`
+		Lnbits  *struct {
+			LightningFeePercent    float64 `json:"lightning_fee_percent" yaml:"lightning_fee_percent"`
+			LightningReserveFeeMin float64 `json:"lightning_reserve_fee_min" yaml:"lightning_reserve_fee_min"`
+			AdminKey               string  `yaml:"admin_key"`
+			Url                    string  `yaml:"url"`
+		} `json:"lnbits" yaml:"lnbits"`
+	} `json:"lightning" json:"lightning"`
 }
 
 var Config Configuration
@@ -27,7 +29,8 @@ const name = "config.yaml"
 
 func init() {
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
-		Config.Lnbits.Enabled = false
+		// no lightning client configuration found. starting mint without lightning support.
+		Config.Lightning.Enabled = false
 		cfg, err := json.Marshal(Config)
 		if err != nil {
 			panic(err)
@@ -48,5 +51,5 @@ func FeeReserve(amountMsat int64, internal bool) int64 {
 	if internal {
 		return 0
 	}
-	return int64(math.Max(Config.Lnbits.LightningReserveFeeMin, float64(amountMsat)*Config.Lnbits.LightningFeePercent/1000))
+	return int64(math.Max(Config.Lightning.Lnbits.LightningReserveFeeMin, float64(amountMsat)*Config.Lightning.Lnbits.LightningFeePercent/1000))
 }

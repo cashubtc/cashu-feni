@@ -7,8 +7,7 @@ import (
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/gohumble/cashu-feni/db"
-	"github.com/gohumble/cashu-feni/lightning"
-	"github.com/gohumble/cashu-feni/mint"
+	"github.com/gohumble/cashu-feni/ledger"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -22,17 +21,27 @@ const (
 )
 
 func New() *Mint {
-	db := db.NewSqlDatabase()
+	// currently using sql storage only.
+	// this should be extensible for future versions.
+	sqlStorage := db.NewSqlDatabase()
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("%s:%s", Config.Mint.Host, Config.Mint.Port),
 		WriteTimeout: 90 * time.Second,
 		ReadTimeout:  90 * time.Second,
 	}
+
+	lnBitsClient, err := ledger.NewLightningClient()
+	if err != nil {
+		panic(err)
+	}
 	m := &Mint{
 		HttpServer: srv,
-		Ledger:     mint.NewLedger(Config.Mint.PrivateKey, db),
+		Ledger: ledger.New(Config.Mint.PrivateKey,
+			ledger.WithClient(lnBitsClient),
+			ledger.WithStorage(sqlStorage),
+		),
 	}
-	lightning.LnbitsClient = lightning.NewClient(lightning.Config.Lnbits.AdminKey, lightning.Config.Lnbits.Url)
+
 	m.HttpServer.Handler = newRouter(*m)
 	log.Trace("created mint server")
 	return m
@@ -145,13 +154,13 @@ func (m Mint) getMint(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Errorf("error checking amount")
 	}
-	invoice, err := m.Ledger.RequestMint(lightning.LnbitsClient, int64(ai))
+	invoice, err := m.Ledger.RequestMint(int64(ai))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
 	log.WithField("invoice", invoice).Infof("created lightning invoice")
-	_, err = fmt.Fprintf(w, `{"pr": "%s", "hash": "%s"}`, invoice.Pr, invoice.Hash)
+	_, err = fmt.Fprintf(w, `{"pr": "%s", "hash": "%s"}`, invoice.GetPaymentRequest(), invoice.GetHash())
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -198,7 +207,7 @@ func (m Mint) mint(w http.ResponseWriter, r *http.Request) {
 		}
 		B_s = append(B_s, publicKey)
 	}
-	promises, err := m.Ledger.Mint(lightning.LnbitsClient, B_s, amounts, pr)
+	promises, err := m.Ledger.Mint(B_s, amounts, pr)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -231,11 +240,11 @@ func (m Mint) melt(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	ok, preimage, err := m.Ledger.Melt(payload.Proofs, payload.Amount, payload.Invoice)
+	payment, err := m.Ledger.Melt(payload.Proofs, payload.Amount, payload.Invoice)
 	if err != nil {
 		log.WithFields(log.Fields{"error.message": err.Error()}).Errorf("error in melt")
 	}
-	response := MeltResponse{Paid: ok, Preimage: preimage}
+	response := MeltResponse{Paid: payment.IsPaid(), Preimage: payment.GetPreimage()}
 	res, err := json.Marshal(response)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))

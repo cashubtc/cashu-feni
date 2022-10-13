@@ -1,4 +1,4 @@
-package mint
+package ledger
 
 import (
 	"crypto/sha256"
@@ -12,6 +12,7 @@ import (
 	"github.com/gohumble/cashu-feni/crypto"
 	"github.com/gohumble/cashu-feni/db"
 	"github.com/gohumble/cashu-feni/lightning"
+	"github.com/gohumble/cashu-feni/lightning/lnbits"
 	decodepay "github.com/nbd-wtf/ln-decodepay"
 	"github.com/samber/lo"
 	"math"
@@ -33,17 +34,48 @@ type Ledger struct {
 	// publicKeys map of amount:publicKey
 	publicKeys map[int64]*secp256k1.PublicKey
 	database   db.MintStorage
+	client     lightning.Client
 }
 
-// NewLedger creates a new ledger and derives keys
-func NewLedger(masterKey string, db db.MintStorage) *Ledger {
+var couldNotCreateClient = fmt.Errorf("could not create lightning client. Please check your configuration")
+
+// NewLightningClient will create a new lightning client implementation based on the ln config
+func NewLightningClient() (lightning.Client, error) {
+	cfg := lightning.Config.Lightning
+	if !cfg.Enabled {
+		return nil, nil
+	}
+	if cfg.Lnbits != nil {
+		return lnbits.NewClient(cfg.Lnbits.AdminKey, cfg.Lnbits.Url), nil
+	}
+	return nil, couldNotCreateClient
+}
+
+type Options func(l *Ledger)
+
+func WithClient(client lightning.Client) Options {
+	return func(l *Ledger) {
+		l.client = client
+	}
+}
+func WithStorage(database db.MintStorage) Options {
+	return func(l *Ledger) {
+		l.database = database
+	}
+}
+
+// New creates a new ledger and derives keys
+func New(masterKey string, opt ...Options) *Ledger {
 
 	l := &Ledger{
 		masterKey:   masterKey,
 		proofsUsed:  make([]string, 0),
 		privateKeys: make(map[int64]*secp256k1.PrivateKey),
 		publicKeys:  make(map[int64]*secp256k1.PublicKey),
-		database:    db,
+	}
+	// apply ledger options
+	for _, o := range opt {
+		o(l)
 	}
 	l.deriveKeys()
 	l.derivePublicKeys()
@@ -70,8 +102,8 @@ func (l *Ledger) derivePublicKeys() {
 }
 
 // requestMint will create and return the lightning invoice for a mint
-func (l *Ledger) RequestMint(c *lightning.Client, amount int64) (lightning.Invoice, error) {
-	invoice, err := c.CreateInvoice(lightning.InvoiceParams{Amount: amount})
+func (l *Ledger) RequestMint(amount int64) (lightning.Invoice, error) {
+	invoice, err := l.client.CreateInvoice(amount, "requested feni mint")
 	if err != nil {
 		return invoice, err
 	}
@@ -89,58 +121,63 @@ func (l *Ledger) CheckFees(pr string) (int64, error) {
 	amount := int64(math.Ceil(float64(decodedInvoice.MSatoshi / 1000)))
 	// hack: check if it's internal, if it exists, it will return paid = False,
 	// if id does not exist (not internal), it returns paid = None
-	invoice, err := lightning.LnbitsClient.GetInvoiceStatus(decodedInvoice.PaymentHash)
+	invoice, err := l.client.InvoiceStatus(decodedInvoice.PaymentHash)
 	if err != nil {
 		// invoice was not found. pay fees
 		return lightning.FeeReserve(amount*1000, false), nil
 	}
-	internal := invoice.Paid == false
+	internal := invoice.IsPaid() == false
 	return lightning.FeeReserve(amount*1000, internal), nil
 }
 
 // checkLightningInvoice will check the lightning invoice amount matches the outputs amount.
-func (l *Ledger) checkLightningInvoice(c *lightning.Client, amounts []int64, paymentHash string) (bool, error) {
+func (l *Ledger) checkLightningInvoice(amounts []int64, paymentHash string) (bool, error) {
 	invoice, err := l.database.GetLightningInvoice(paymentHash)
 	if err != nil {
 		return false, err
 	}
-	if invoice.Issued {
+	if invoice.IsIssued() {
 		return false, fmt.Errorf("tokens already issued for this invoice.")
 	}
-	payment, err := c.GetInvoiceStatus(paymentHash)
+	payment, err := l.client.InvoiceStatus(paymentHash)
+	if err != nil {
+		return false, err
+	}
 	// sum all amounts
 	total := lo.SumBy[int64](amounts, func(amount int64) int64 {
 		return amount
 	})
 	// validate total and invoice amount
-	if total > invoice.Amount {
-		return false, fmt.Errorf("requested amount too high: %d. Invoice amount: %d", total, invoice.Amount)
+	if total > invoice.GetAmount() {
+		return false, fmt.Errorf("requested amount too high: %d. Invoice amount: %d", total, invoice.GetAmount())
 	}
 	if err != nil {
 		return false, err
 	}
-	if payment.Paid {
+	if payment.IsPaid() {
 		err = l.database.UpdateLightningInvoice(paymentHash, true)
 		if err != nil {
+			// todo -- check if we rly want to return false here!
 			return false, err
 		}
 	}
-	return payment.Paid, err
+	return payment.IsPaid(), err
 }
 
 // payLightningInvoice will pay pr using master wallet
-func (l *Ledger) payLightningInvoice(c *lightning.Client, pr string, feesMsat int64) (lightning.LNbitsPayment, error) {
-	invoice, err := lightning.Pay(lightning.PaymentParams{Out: true, Bolt11: pr, FeeLimitMSat: feesMsat}, c)
+func (l *Ledger) payLightningInvoice(pr string, feeLimitMSat int64) (lightning.Payment, error) {
+	invoice, err := l.client.Pay(pr)
 	if err != nil {
-		return lightning.LNbitsPayment{}, err
+		return lnbits.LNbitsPayment{}, err
 	}
-	return c.GetPaymentStatus(invoice.Hash)
+	return l.client.InvoiceStatus(invoice.GetHash())
 }
 
 // mint generates promises for keys. checks lightning invoice before creating promise.
-func (l *Ledger) Mint(c *lightning.Client, keys []*secp256k1.PublicKey, amounts []int64, pr string) ([]cashu.BlindedSignature, error) {
-	if lightning.Config.Lnbits.Enabled {
-		paid, err := l.checkLightningInvoice(c, amounts, pr)
+func (l *Ledger) Mint(keys []*secp256k1.PublicKey, amounts []int64, pr string) ([]cashu.BlindedSignature, error) {
+	// if the client is not nil, ledger is running on lightning
+	if l.client != nil {
+		paid, err := l.checkLightningInvoice(amounts, pr)
 		if err != nil {
 			return nil, err
 		}
@@ -376,13 +413,13 @@ if not all( [self._verify_proof(p) for p in proofs]):
 raise Exception ("could not verify proofs.")
 */
 // melt will meld proofs
-func (l *Ledger) Melt(proofs []cashu.Proof, amount int64, invoice string) (status bool, preimage string, err error) {
+func (l *Ledger) Melt(proofs []cashu.Proof, amount int64, invoice string) (payment lightning.Payment, err error) {
 	var total int64
 	for _, proof := range proofs {
 		// verify every proof and sum total amount
 		err = l.verifyProof(proof)
 		if err != nil {
-			return false, "", err
+			return nil, err
 		}
 		total += proof.Amount
 	}
@@ -391,22 +428,22 @@ func (l *Ledger) Melt(proofs []cashu.Proof, amount int64, invoice string) (statu
 	amount = int64(math.Ceil(float64(bolt.MSatoshi / 1000)))
 	fee, err := l.CheckFees(invoice)
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
 	if !(total >= amount+(fee/1000)) {
-		return false, "", fmt.Errorf("provided proofs not enough for Lightning payment")
+		return nil, fmt.Errorf("provided proofs not enough for Lightning payment")
 	}
-	payment, err := l.payLightningInvoice(lightning.LnbitsClient, invoice, fee)
+	payment, err = l.payLightningInvoice(invoice, fee)
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
-	if payment.Paid == true {
+	if payment.IsPaid() == true {
 		err = l.invalidateProofs(proofs)
 		if err != nil {
-			return false, "", err
+			return nil, err
 		}
 	}
-	return payment.Paid, payment.Preimage, nil
+	return payment, nil
 }
 
 // split will split proofs. creates BlindedSignatures from BlindedMessages.

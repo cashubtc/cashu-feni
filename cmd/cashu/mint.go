@@ -2,13 +2,14 @@ package main
 
 import (
 	"github.com/gohumble/cashu-feni/cashu"
-	"github.com/gohumble/cashu-feni/mint"
+	"github.com/gohumble/cashu-feni/ledger"
 	"net/http"
 )
 
+// todo -- this responses are currently not used.
 type Mint struct {
 	HttpServer *http.Server
-	Ledger     *mint.Ledger
+	Ledger     *ledger.Ledger
 }
 
 type MintResponse cashu.BlindedMessages

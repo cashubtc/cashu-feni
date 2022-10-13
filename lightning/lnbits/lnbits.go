@@ -1,16 +1,15 @@
-package lightning
+package lnbits
 
 import (
 	"fmt"
+	"github.com/gohumble/cashu-feni/lightning"
 	"time"
 
 	"github.com/imroc/req"
 )
 
-var LnbitsClient *Client
-
 // NewClient returns a new lnbits api client. Pass your API key and url here.
-func NewClient(key, url string) *Client {
+func NewClient(key, url string) lightning.Client {
 	return &Client{
 		url: url,
 		// info: this header holds the ADMIN key for the entire API
@@ -46,34 +45,41 @@ func (c Client) Status() (wtx Wallet, err error) {
 	return
 }
 
+func NewInvoice() lightning.Invoice {
+	return &Invoice{}
+}
+
 // Invoice creates an invoice associated with this wallet.
-func (c *Client) CreateInvoice(params InvoiceParams) (lntx Invoice, err error) {
+func (c *Client) CreateInvoice(amount int64, memo string) (lightning.Invoice, error) {
+	params := InvoiceParams{Amount: amount, Memo: memo}
 	resp, err := req.Post(c.url+"/api/v1/payments", c.header, req.BodyJSON(&params))
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if resp.Response().StatusCode >= 300 {
 		var reqErr Error
 		err = resp.ToJSON(&reqErr)
 		if err != nil {
-			return
+			return nil, err
 		}
 		err = reqErr
-		return
+		return nil, err
 	}
-
-	err = resp.ToJSON(&lntx)
+	invoice := &Invoice{}
+	err = resp.ToJSON(invoice)
 	if err == nil {
-		lntx.Amount = params.Amount
+		invoice.SetAmount(params.Amount)
+		return invoice, nil
 	}
-	return
+	return nil, err
 }
 
 // Pay pays a given invoice with funds from the wallet.
-func Pay(params PaymentParams, c *Client) (wtx Invoice, err error) {
+func (c *Client) Pay(paymentRequest string) (wtx lightning.Invoice, err error) {
 	r := req.New()
 	r.SetTimeout(time.Hour * 24)
+	params := PaymentParams{Out: true, Bolt11: paymentRequest}
 	resp, err := r.Post(c.url+"/api/v1/payments", c.header, req.BodyJSON(&params))
 	if err != nil {
 		return
@@ -94,27 +100,26 @@ func Pay(params PaymentParams, c *Client) (wtx Invoice, err error) {
 }
 
 // Payment state of a payment
-func (c Client) GetPaymentStatus(payment_hash string) (payment LNbitsPayment, err error) {
-	return c.GetInvoiceStatus(payment_hash)
+func (c Client) GetPaymentStatus(payment_hash string) (payment lightning.Payment, err error) {
+	return c.InvoiceStatus(payment_hash)
 }
 
 // Payment state of a payment
-func (c Client) GetInvoiceStatus(payment_hash string) (payment LNbitsPayment, err error) {
-	resp, err := req.Get(c.url+fmt.Sprintf("/api/v1/payments/%s", payment_hash), c.header, nil)
+func (c Client) InvoiceStatus(paymentHash string) (lightning.Payment, error) {
+	resp, err := req.Get(c.url+fmt.Sprintf("/api/v1/payments/%s", paymentHash), c.header, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if resp.Response().StatusCode >= 300 {
 		var reqErr Error
 		err = resp.ToJSON(&reqErr)
 		if err != nil {
-			return
+			return nil, err
 		}
 		err = reqErr
-		return
+		return nil, err
 	}
-
-	err = resp.ToJSON(&payment)
-	return
+	payment := LNbitsPayment{}
+	return &payment, resp.ToJSON(&payment)
 }

@@ -39,7 +39,7 @@ func open(dialector gorm.Dialector) *gorm.DB {
 		panic(err)
 	}
 
-	err = orm.AutoMigrate(&lightning.Invoice{})
+	err = orm.AutoMigrate(cashu.CreateInvoice())
 	if err != nil {
 		panic(err)
 	}
@@ -73,12 +73,13 @@ func (s SqlDatabase) StorePromise(p cashu.Promise) error {
 
 // storeLightningInvoice will store lightning invoice in db
 func (s SqlDatabase) StoreLightningInvoice(i lightning.Invoice) error {
-	return s.db.Create(&i).Error
+	return s.db.Create(i).Error
 }
 
 // getLightningInvoice reads lighting invoice from db
-func (s SqlDatabase) GetLightningInvoice(hash string) (*lightning.Invoice, error) {
-	invoice := &lightning.Invoice{Hash: hash}
+func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoice, error) {
+	invoice := cashu.CreateInvoice()
+	invoice.SetHash(hash)
 	tx := s.db.Find(invoice)
 	return invoice, tx.Error
 }
@@ -89,6 +90,6 @@ func (s SqlDatabase) UpdateLightningInvoice(hash string, issued bool) error {
 	if err != nil {
 		return err
 	}
-	i.Issued = issued
+	i.SetIssued(issued)
 	return s.db.Save(i).Error
 }
