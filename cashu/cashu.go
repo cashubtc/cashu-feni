@@ -77,8 +77,11 @@ func (e ErrorResponse) Error() string {
 	return e.Err
 }
 
-// create
+// CreateInvoice will generate a blank invoice
 func CreateInvoice() lightning.Invoice {
+	if !lightning.Config.Lightning.Enabled {
+		return nil
+	}
 	if lightning.Config.Lightning.Lnbits != nil {
 		return lnbits.NewInvoice()
 	}

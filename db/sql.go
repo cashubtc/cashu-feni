@@ -38,10 +38,13 @@ func open(dialector gorm.Dialector) *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-
-	err = orm.AutoMigrate(cashu.CreateInvoice())
-	if err != nil {
-		panic(err)
+	migrationInvoice := cashu.CreateInvoice()
+	// do not migrate invoice, if lightning is not enabled
+	if migrationInvoice != nil {
+		err = orm.AutoMigrate(migrationInvoice)
+		if err != nil {
+			panic(err)
+		}
 	}
 	err = orm.AutoMigrate(&cashu.Proof{})
 	if err != nil {
