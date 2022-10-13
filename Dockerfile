@@ -15,7 +15,7 @@ FROM alpine:latest
 
 RUN adduser -S -D -H -h /app feni
 
-COPY --from=builder /build/cashu/cashu-feni /app/
+COPY --from=builder /build/cashu-feni /app/
 
 RUN chown -R feni /app
 
