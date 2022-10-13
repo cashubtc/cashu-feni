@@ -1,7 +1,6 @@
 package mint
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -30,28 +29,28 @@ type Mint struct {
 	// masterKey used to derive mints private key
 	masterKey string
 	// privateKeys map of amount:privateKey
-	privateKeys map[int64]*secp256k1.PrivateKey
+	//privateKeys map[int64]*secp256k1.PrivateKey
 	// publicKeys map of amount:publicKey
-	publicKeys map[int64]*secp256k1.PublicKey
-	database   db.MintStorage
-	client     lightning.Client
+	//publicKeys map[int64]*secp256k1.PublicKey
+	keySets  map[string]*crypto.KeySet
+	database db.MintStorage
+	client   lightning.Client
 }
 
 // New creates a new ledger and derives keys
 func New(masterKey string, opt ...Options) *Mint {
-
 	l := &Mint{
-		masterKey:   masterKey,
-		proofsUsed:  make([]string, 0),
-		privateKeys: make(map[int64]*secp256k1.PrivateKey),
-		publicKeys:  make(map[int64]*secp256k1.PublicKey),
+		masterKey:  masterKey,
+		proofsUsed: make([]string, 0),
+		keySets:    make(map[string]*crypto.KeySet, 0),
+		//privateKeys: make(map[int64]*secp256k1.PrivateKey),
+		//publicKeys:  make(map[int64]*secp256k1.PublicKey),
 	}
 	// apply ledger options
 	for _, o := range opt {
 		o(l)
 	}
-	l.deriveKeys()
-	l.derivePublicKeys()
+
 	lo.ForEach[cashu.Proof](l.database.GetUsedProofs(), func(proof cashu.Proof, i int) {
 		l.proofsUsed = append(l.proofsUsed, proof.Secret)
 	})
@@ -74,46 +73,41 @@ func NewLightningClient() (lightning.Client, error) {
 
 type Options func(l *Mint)
 
+func WithInitialKeySet(masterKey, derivationPath string) Options {
+	return func(l *Mint) {
+		l.keySets[masterKey] = crypto.NewKeySet(masterKey, derivationPath)
+
+	}
+}
+
 func WithClient(client lightning.Client) Options {
 	return func(l *Mint) {
 		l.client = client
 	}
 }
+
 func WithStorage(database db.MintStorage) Options {
 	return func(l *Mint) {
 		l.database = database
 	}
 }
-
-// deriveKeys will generate private keys for the mint server
-func (l *Mint) deriveKeys() {
-	for i := 0; i < MaxOrder; i++ {
-		hasher := sha256.New()
-		hasher.Write([]byte(l.masterKey + strconv.Itoa(i)))
-		l.privateKeys[int64(math.Pow(2, float64(i)))] = secp256k1.PrivKeyFromBytes(hasher.Sum(nil)[:32])
-	}
-}
-
-// derivePublicKeys will generate public keys for the mint server
-func (l *Mint) derivePublicKeys() {
-	for amt, key := range l.privateKeys {
-		l.publicKeys[amt] = key.PubKey()
-	}
+func (m Mint) GetKeySetIds() []string {
+	return lo.Keys(m.keySets)
 }
 
 // requestMint will create and return the lightning invoice for a mint
-func (l *Mint) RequestMint(amount int64) (lightning.Invoice, error) {
-	invoice, err := l.client.CreateInvoice(amount, "requested feni mint")
+func (m *Mint) RequestMint(amount int64) (lightning.Invoice, error) {
+	invoice, err := m.client.CreateInvoice(amount, "requested feni mint")
 	if err != nil {
 		return invoice, err
 	}
-	err = l.database.StoreLightningInvoice(invoice)
+	err = m.database.StoreLightningInvoice(invoice)
 	if err != nil {
 		return invoice, err
 	}
 	return invoice, nil
 }
-func (l *Mint) CheckFees(pr string) (int64, error) {
+func (m *Mint) CheckFees(pr string) (int64, error) {
 	decodedInvoice, err := decodepay.Decodepay(pr)
 	if err != nil {
 		return 0, err
@@ -121,7 +115,7 @@ func (l *Mint) CheckFees(pr string) (int64, error) {
 	amount := int64(math.Ceil(float64(decodedInvoice.MSatoshi / 1000)))
 	// hack: check if it's internal, if it exists, it will return paid = False,
 	// if id does not exist (not internal), it returns paid = None
-	invoice, err := l.client.InvoiceStatus(decodedInvoice.PaymentHash)
+	invoice, err := m.client.InvoiceStatus(decodedInvoice.PaymentHash)
 	if err != nil {
 		// invoice was not found. pay fees
 		return lightning.FeeReserve(amount*1000, false), nil
@@ -131,15 +125,15 @@ func (l *Mint) CheckFees(pr string) (int64, error) {
 }
 
 // checkLightningInvoice will check the lightning invoice amount matches the outputs amount.
-func (l *Mint) checkLightningInvoice(amounts []int64, paymentHash string) (bool, error) {
-	invoice, err := l.database.GetLightningInvoice(paymentHash)
+func (m *Mint) checkLightningInvoice(amounts []int64, paymentHash string) (bool, error) {
+	invoice, err := m.database.GetLightningInvoice(paymentHash)
 	if err != nil {
 		return false, err
 	}
 	if invoice.IsIssued() {
 		return false, fmt.Errorf("tokens already issued for this invoice.")
 	}
-	payment, err := l.client.InvoiceStatus(paymentHash)
+	payment, err := m.client.InvoiceStatus(paymentHash)
 	if err != nil {
 		return false, err
 	}
@@ -155,7 +149,7 @@ func (l *Mint) checkLightningInvoice(amounts []int64, paymentHash string) (bool,
 		return false, err
 	}
 	if payment.IsPaid() {
-		err = l.database.UpdateLightningInvoice(paymentHash, true)
+		err = m.database.UpdateLightningInvoice(paymentHash, true)
 		if err != nil {
 			// todo -- check if we rly want to return false here!
 			return false, err
@@ -165,16 +159,16 @@ func (l *Mint) checkLightningInvoice(amounts []int64, paymentHash string) (bool,
 }
 
 // payLightningInvoice will pay pr using master wallet
-func (l *Mint) payLightningInvoice(pr string, feeLimitMSat int64) (lightning.Payment, error) {
-	invoice, err := l.client.Pay(pr)
+func (m *Mint) payLightningInvoice(pr string, feeLimitMSat int64) (lightning.Payment, error) {
+	invoice, err := m.client.Pay(pr)
 	if err != nil {
 		return lnbits.LNbitsPayment{}, err
 	}
-	return l.client.InvoiceStatus(invoice.GetHash())
+	return m.client.InvoiceStatus(invoice.GetHash())
 }
 
 // mint generates promises for keys. checks lightning invoice before creating promise.
-func (l *Mint) Mint(messages cashu.BlindedMessages, amounts []int64, pr string) ([]cashu.BlindedSignature, error) {
+func (m *Mint) Mint(messages cashu.BlindedMessages, amounts []int64, pr string) ([]cashu.BlindedSignature, error) {
 	publicKeys := make([]*secp256k1.PublicKey, 0)
 	for _, msg := range messages {
 		amounts = append(amounts, msg.Amount)
@@ -187,8 +181,8 @@ func (l *Mint) Mint(messages cashu.BlindedMessages, amounts []int64, pr string) 
 		publicKeys = append(publicKeys, publicKey)
 	}
 	// if the client is not nil, ledger is running on lightning
-	if l.client != nil {
-		paid, err := l.checkLightningInvoice(amounts, pr)
+	if m.client != nil {
+		paid, err := m.checkLightningInvoice(amounts, pr)
 		if err != nil {
 			return nil, err
 		}
@@ -198,7 +192,7 @@ func (l *Mint) Mint(messages cashu.BlindedMessages, amounts []int64, pr string) 
 	}
 	promises := make([]cashu.BlindedSignature, 0)
 	for i, key := range publicKeys {
-		sig, err := l.generatePromise(amounts[i], key)
+		sig, err := m.generatePromise(amounts[i], key)
 		if err != nil {
 			return nil, err
 		}
@@ -208,9 +202,9 @@ func (l *Mint) Mint(messages cashu.BlindedMessages, amounts []int64, pr string) 
 }
 
 // generatePromise will generate promise and signature for given amount using public key
-func (l *Mint) generatePromise(amount int64, B_ *secp256k1.PublicKey) (cashu.BlindedSignature, error) {
-	C_ := crypto.SecondStepBob(*B_, *l.privateKeys[amount])
-	err := l.database.StorePromise(cashu.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
+func (m *Mint) generatePromise(amount int64, B_ *secp256k1.PublicKey) (cashu.BlindedSignature, error) {
+	C_ := crypto.SecondStepBob(*B_, *m.keySets[m.masterKey].PrivateKeys[amount])
+	err := m.database.StorePromise(cashu.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
 	if err != nil {
 		return cashu.BlindedSignature{}, err
 	}
@@ -218,10 +212,10 @@ func (l *Mint) generatePromise(amount int64, B_ *secp256k1.PublicKey) (cashu.Bli
 }
 
 // generatePromises will generate multiple promises and signatures
-func (l *Mint) generatePromises(amounts []int64, keys []*secp256k1.PublicKey) ([]cashu.BlindedSignature, error) {
+func (m *Mint) generatePromises(amounts []int64, keys []*secp256k1.PublicKey) ([]cashu.BlindedSignature, error) {
 	promises := make([]cashu.BlindedSignature, 0)
 	for i, key := range keys {
-		p, err := l.generatePromise(amounts[i], key)
+		p, err := m.generatePromise(amounts[i], key)
 		if err != nil {
 			return nil, err
 		}
@@ -231,11 +225,11 @@ func (l *Mint) generatePromises(amounts []int64, keys []*secp256k1.PublicKey) ([
 }
 
 // verifyProof will verify proof
-func (l *Mint) verifyProof(proof cashu.Proof) error {
-	if !l.checkSpendable(proof) {
+func (m *Mint) verifyProof(proof cashu.Proof) error {
+	if !m.checkSpendable(proof) {
 		return fmt.Errorf("tokens already spent. Secret: %s", proof.Secret)
 	}
-	secretKey := l.privateKeys[proof.Amount]
+	secretKey := m.keySets[m.masterKey].PrivateKeys[proof.Amount]
 	pubKey, err := hex.DecodeString(proof.C)
 	if err != nil {
 		return err
@@ -313,17 +307,17 @@ func verifyNoDuplicates(proofs []cashu.Proof, outputs []cashu.BlindedMessage) bo
 }
 
 // checkSpendables checks multiple proofs
-func (l *Mint) CheckSpendables(proofs []cashu.Proof) map[int]bool {
+func (m *Mint) CheckSpendables(proofs []cashu.Proof) map[int]bool {
 	result := make(map[int]bool, 0)
 	for i, proof := range proofs {
-		result[i] = l.checkSpendable(proof)
+		result[i] = m.checkSpendable(proof)
 	}
 	return result
 }
 
 // checkSpendable returns true if proof was not used before
-func (l *Mint) checkSpendable(proof cashu.Proof) bool {
-	_, found := lo.Find[string](l.proofsUsed, func(p string) bool {
+func (m *Mint) checkSpendable(proof cashu.Proof) bool {
+	_, found := lo.Find[string](m.proofsUsed, func(p string) bool {
 		return p == proof.Secret
 	})
 	return !found
@@ -388,7 +382,7 @@ func verifyEquationBalanced(proofs []cashu.Proof, outs []cashu.BlindedSignature)
 }
 
 // invalidateProofs will invalidate multiple proofs at once by persisting them into proof table
-func (l *Mint) invalidateProofs(proofs []cashu.Proof) error {
+func (m *Mint) invalidateProofs(proofs []cashu.Proof) error {
 	proofMsgs := make(map[string]struct{})
 	// get unique proofs
 	for _, proof := range proofs {
@@ -396,13 +390,13 @@ func (l *Mint) invalidateProofs(proofs []cashu.Proof) error {
 	}
 	// append to proofs used
 	for pm := range proofMsgs {
-		l.proofsUsed = append(l.proofsUsed, pm)
+		m.proofsUsed = append(m.proofsUsed, pm)
 	}
 	// make proofs used unique again...
-	l.proofsUsed = lo.Uniq[string](l.proofsUsed)
+	m.proofsUsed = lo.Uniq[string](m.proofsUsed)
 	// invalidate all proofs
 	for _, proof := range proofs {
-		err := l.database.InvalidateProof(proof)
+		err := m.database.InvalidateProof(proof)
 		if err != nil {
 			return err
 		}
@@ -411,9 +405,9 @@ func (l *Mint) invalidateProofs(proofs []cashu.Proof) error {
 }
 
 // GetPublicKeys will return current public keys for all amounts
-func (l *Mint) GetPublicKeys() map[int64]string {
+func (m *Mint) GetPublicKeys() map[int64]string {
 	ret := make(map[int64]string, 0)
-	for i, key := range l.publicKeys {
+	for i, key := range m.keySets[m.masterKey].PublicKeys {
 		ret[i] = hex.EncodeToString(key.SerializeCompressed())
 	}
 	return ret
@@ -424,11 +418,11 @@ if not all( [self._verify_proof(p) for p in proofs]):
 raise Exception ("could not verify proofs.")
 */
 // melt will meld proofs
-func (l *Mint) Melt(proofs []cashu.Proof, amount int64, invoice string) (payment lightning.Payment, err error) {
+func (m *Mint) Melt(proofs []cashu.Proof, amount int64, invoice string) (payment lightning.Payment, err error) {
 	var total int64
 	for _, proof := range proofs {
 		// verify every proof and sum total amount
-		err = l.verifyProof(proof)
+		err = m.verifyProof(proof)
 		if err != nil {
 			return nil, err
 		}
@@ -437,19 +431,19 @@ func (l *Mint) Melt(proofs []cashu.Proof, amount int64, invoice string) (payment
 	// decode invoice and use this amount instead of melt amount
 	bolt, err := decodepay.Decodepay(invoice)
 	amount = int64(math.Ceil(float64(bolt.MSatoshi / 1000)))
-	fee, err := l.CheckFees(invoice)
+	fee, err := m.CheckFees(invoice)
 	if err != nil {
 		return nil, err
 	}
 	if !(total >= amount+(fee/1000)) {
 		return nil, fmt.Errorf("provided proofs not enough for Lightning payment")
 	}
-	payment, err = l.payLightningInvoice(invoice, fee)
+	payment, err = m.payLightningInvoice(invoice, fee)
 	if err != nil {
 		return nil, err
 	}
 	if payment.IsPaid() == true {
-		err = l.invalidateProofs(proofs)
+		err = m.invalidateProofs(proofs)
 		if err != nil {
 			return nil, err
 		}
@@ -458,7 +452,7 @@ func (l *Mint) Melt(proofs []cashu.Proof, amount int64, invoice string) (payment
 }
 
 // split will split proofs. creates BlindedSignatures from BlindedMessages.
-func (l *Mint) Split(proofs []cashu.Proof, amount int64, outputs []cashu.BlindedMessage) ([]cashu.BlindedSignature, []cashu.BlindedSignature, error) {
+func (m *Mint) Split(proofs []cashu.Proof, amount int64, outputs []cashu.BlindedMessage) ([]cashu.BlindedSignature, []cashu.BlindedSignature, error) {
 	total := lo.SumBy[cashu.Proof](proofs, func(p cashu.Proof) int64 {
 		return p.Amount
 	})
@@ -507,7 +501,7 @@ func (l *Mint) Split(proofs []cashu.Proof, amount int64, outputs []cashu.Blinded
 
 	// verify proofs
 	for _, proof := range proofs {
-		err := l.verifyProof(proof)
+		err := m.verifyProof(proof)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -519,7 +513,7 @@ func (l *Mint) Split(proofs []cashu.Proof, amount int64, outputs []cashu.Blinded
 		return nil, nil, err
 	}
 	// invalidate proofs
-	err = l.invalidateProofs(proofs)
+	err = m.invalidateProofs(proofs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -552,11 +546,11 @@ func (l *Mint) Split(proofs []cashu.Proof, amount int64, outputs []cashu.Blinded
 		B_snd = append(B_snd, key)
 	}
 	// create promises for outputs
-	fstPromise, err := l.generatePromises(outsFts, B_fst)
+	fstPromise, err := m.generatePromises(outsFts, B_fst)
 	if err != nil {
 		return nil, nil, err
 	}
-	sendPromise, err := l.generatePromises(outsSnd, B_snd)
+	sendPromise, err := m.generatePromises(outsSnd, B_snd)
 	if err != nil {
 		return nil, nil, err
 	}

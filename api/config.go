@@ -19,10 +19,11 @@ type Configuration struct {
 	LogLevel     string `yaml:"log_level" json:"log_level"`
 
 	Mint struct {
-		PrivateKey string `json:"private_key" yaml:"private_key"`
-		Host       string `json:"host" yaml:"host"`
-		Port       string `json:"port" yaml:"port"`
-		Tls        struct {
+		PrivateKey     string `json:"private_key" yaml:"private_key"`
+		DerivationPath string `json:"derivation_path" yaml:"derivation_path"`
+		Host           string `json:"host" yaml:"host"`
+		Port           string `json:"port" yaml:"port"`
+		Tls            struct {
 			Enabled  bool   `json:"enabled" yaml:"enabled"`
 			KeyFile  string `json:"key_path" yaml:"key_path"`
 			CertFile string `json:"cert_path" yaml:"cert_path"`

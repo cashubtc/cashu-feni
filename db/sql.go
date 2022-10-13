@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/gohumble/cashu-feni/crypto"
 	"github.com/gohumble/cashu-feni/lightning"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -31,7 +32,7 @@ func createSqliteDatabase() MintStorage {
 	}
 
 	db := SqlDatabase{db: open(sqlite.Open(path.Join(filePath, "database.db")))}
-	err := db.Migrate(cashu.Proof{}, cashu.Promise{}, cashu.CreateInvoice())
+	err := db.Migrate(cashu.Proof{}, cashu.Promise{}, crypto.KeySet{}, cashu.CreateInvoice())
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +48,7 @@ func open(dialector gorm.Dialector) *gorm.DB {
 	return orm
 }
 
-func (s SqlDatabase) Migrate(proof cashu.Proof, promise cashu.Promise, invoice lightning.Invoice) error {
+func (s SqlDatabase) Migrate(proof cashu.Proof, promise cashu.Promise, keySet crypto.KeySet, invoice lightning.Invoice) error {
 	// do not migrate invoice, if lightning is not enabled
 	if invoice != nil {
 		err := s.db.AutoMigrate(invoice)
@@ -60,6 +61,10 @@ func (s SqlDatabase) Migrate(proof cashu.Proof, promise cashu.Promise, invoice l
 		panic(err)
 	}
 	err = s.db.AutoMigrate(promise)
+	if err != nil {
+		panic(err)
+	}
+	err = s.db.AutoMigrate(keySet)
 	if err != nil {
 		panic(err)
 	}

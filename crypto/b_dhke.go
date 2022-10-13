@@ -88,7 +88,7 @@ func ThirdStepAlice(c_ secp256k1.PublicKey, r secp256k1.PrivateKey, A secp256k1.
 }
 
 // Verify that secret was signed by bob.
-// cuveFunc should be legacyHashToCurve for client version < 0.3.3
+// curveFunc should be legacyHashToCurve for client version < 0.3.3
 // this could be removed and replaced with static invocation of hashToCurve
 func Verify(a secp256k1.PrivateKey, c secp256k1.PublicKey, secretMessage string, curveFunc func(msg []byte) *secp256k1.PublicKey) bool {
 	var Y, Result secp256k1.JacobianPoint

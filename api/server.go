@@ -37,10 +37,11 @@ func New() *Api {
 		Mint: mint.New(Config.Mint.PrivateKey,
 			mint.WithClient(lnBitsClient),
 			mint.WithStorage(sqlStorage),
+			mint.WithInitialKeySet(Config.Mint.PrivateKey, Config.Mint.DerivationPath),
 		),
 	}
 
-	m.HttpServer.Handler = newRouter(*m)
+	m.HttpServer.Handler = newRouter(m)
 	log.Trace("created mint server")
 	return m
 }
@@ -75,11 +76,11 @@ func (api Api) StartServer() {
 		log.Println(api.HttpServer.ListenAndServe())
 	}
 }
-func newRouter(a Api) *mux.Router {
+func newRouter(a *Api) *mux.Router {
 	router := mux.NewRouter()
 	// route to receive mint public keys
 	router.HandleFunc("/keys", Use(a.getKeys, LoggingMiddleware)).Methods(http.MethodGet)
-	router.HandleFunc("/keysets", Use(a.getKeysets, LoggingMiddleware)).Methods(http.MethodGet)
+	router.HandleFunc("/keysets", Use(a.getKeySets, LoggingMiddleware)).Methods(http.MethodGet)
 	// route to get mint (create tokens)
 	router.HandleFunc("/mint", Use(a.getMint, LoggingMiddleware)).Methods(http.MethodGet)
 	// route to real mint (with LIGHTNING enabled)
@@ -265,8 +266,14 @@ func (api Api) getKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func (api Api) getKeysets(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(`{"keysets":{}}`))
+func (api Api) getKeySets(w http.ResponseWriter, r *http.Request) {
+	response := GetKeySetsResponse{KeySets: api.Mint.GetKeySetIds()}
+	res, err := json.Marshal(response)
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
+	w.Write(res)
 }
 
 // check is the http handler function for POST /check
