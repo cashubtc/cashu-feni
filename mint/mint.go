@@ -37,6 +37,27 @@ type Mint struct {
 	client     lightning.Client
 }
 
+// New creates a new ledger and derives keys
+func New(masterKey string, opt ...Options) *Mint {
+
+	l := &Mint{
+		masterKey:   masterKey,
+		proofsUsed:  make([]string, 0),
+		privateKeys: make(map[int64]*secp256k1.PrivateKey),
+		publicKeys:  make(map[int64]*secp256k1.PublicKey),
+	}
+	// apply ledger options
+	for _, o := range opt {
+		o(l)
+	}
+	l.deriveKeys()
+	l.derivePublicKeys()
+	lo.ForEach[cashu.Proof](l.database.GetUsedProofs(), func(proof cashu.Proof, i int) {
+		l.proofsUsed = append(l.proofsUsed, proof.Secret)
+	})
+	return l
+}
+
 var couldNotCreateClient = fmt.Errorf("could not create lightning client. Please check your configuration")
 
 // NewLightningClient will create a new lightning client implementation based on the ln config
@@ -62,27 +83,6 @@ func WithStorage(database db.MintStorage) Options {
 	return func(l *Mint) {
 		l.database = database
 	}
-}
-
-// New creates a new ledger and derives keys
-func New(masterKey string, opt ...Options) *Mint {
-
-	l := &Mint{
-		masterKey:   masterKey,
-		proofsUsed:  make([]string, 0),
-		privateKeys: make(map[int64]*secp256k1.PrivateKey),
-		publicKeys:  make(map[int64]*secp256k1.PublicKey),
-	}
-	// apply ledger options
-	for _, o := range opt {
-		o(l)
-	}
-	l.deriveKeys()
-	l.derivePublicKeys()
-	lo.ForEach[cashu.Proof](l.database.GetUsedProofs(), func(proof cashu.Proof, i int) {
-		l.proofsUsed = append(l.proofsUsed, proof.Secret)
-	})
-	return l
 }
 
 // deriveKeys will generate private keys for the mint server
