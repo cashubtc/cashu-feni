@@ -1,4 +1,4 @@
-package main
+package mint
 
 // Will handle the yaml configuration for the proxy.
 import (

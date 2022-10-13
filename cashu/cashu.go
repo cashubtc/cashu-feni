@@ -2,9 +2,9 @@ package cashu
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/lightning/lnbits"
-	"github.com/gohumble/cashu-feni/mint"
 	"time"
 )
 
@@ -70,7 +70,7 @@ func NewErrorResponse(err error, options ...ErrorOptions) ErrorResponse {
 }
 
 func (e ErrorResponse) String() string {
-	return mint.ToJson(e)
+	return ToJson(e)
 }
 
 func (e ErrorResponse) Error() string {
@@ -83,4 +83,12 @@ func CreateInvoice() lightning.Invoice {
 		return lnbits.NewInvoice()
 	}
 	return nil
+}
+
+func ToJson(i interface{}) string {
+	b, err := json.Marshal(i)
+	if err != nil {
+		return err.Error()
+	}
+	return string(b)
 }

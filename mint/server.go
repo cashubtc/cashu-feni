@@ -1,4 +1,4 @@
-package main
+package mint
 
 import (
 	"encoding/hex"
