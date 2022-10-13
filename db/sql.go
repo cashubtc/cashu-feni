@@ -30,7 +30,12 @@ func createSqliteDatabase() MintStorage {
 		}
 	}
 
-	return SqlDatabase{db: open(sqlite.Open(path.Join(filePath, "database.db")))}
+	db := SqlDatabase{db: open(sqlite.Open(path.Join(filePath, "database.db")))}
+	err := db.Migrate(cashu.Proof{}, cashu.Promise{}, cashu.CreateInvoice())
+	if err != nil {
+		panic(err)
+	}
+	return db
 }
 func open(dialector gorm.Dialector) *gorm.DB {
 	orm, err := gorm.Open(dialector,
@@ -38,23 +43,27 @@ func open(dialector gorm.Dialector) *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-	migrationInvoice := cashu.CreateInvoice()
+
+	return orm
+}
+
+func (s SqlDatabase) Migrate(proof cashu.Proof, promise cashu.Promise, invoice lightning.Invoice) error {
 	// do not migrate invoice, if lightning is not enabled
-	if migrationInvoice != nil {
-		err = orm.AutoMigrate(migrationInvoice)
+	if invoice != nil {
+		err := s.db.AutoMigrate(invoice)
 		if err != nil {
 			panic(err)
 		}
 	}
-	err = orm.AutoMigrate(&cashu.Proof{})
+	err := s.db.AutoMigrate(proof)
 	if err != nil {
 		panic(err)
 	}
-	err = orm.AutoMigrate(&cashu.Promise{})
+	err = s.db.AutoMigrate(promise)
 	if err != nil {
 		panic(err)
 	}
-	return orm
+	return nil
 }
 
 // getUsedProofs reads all proofs from db

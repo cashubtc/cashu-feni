@@ -12,4 +12,5 @@ type MintStorage interface {
 	StoreLightningInvoice(i lightning.Invoice) error
 	GetLightningInvoice(hash string) (lightning.Invoice, error)
 	UpdateLightningInvoice(hash string, issued bool) error
+	Migrate(cashu.Proof, cashu.Promise, lightning.Invoice) error
 }
