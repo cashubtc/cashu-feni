@@ -6,15 +6,16 @@ ADD . /build/
 
 RUN apk --no-cache add git alpine-sdk build-base gcc
 
-WORKDIR /build/cmd/cashu
+WORKDIR /build
 
-RUN go build -o cashu  .
+
+RUN go build -o dist/cashu cmd/cashu/mint.go
 
 FROM alpine:latest
 
 RUN adduser -S -D -H -h /app feni
 
-COPY --from=builder /build/cmd/cashu/cashu /app/
+COPY --from=builder /build/dist/cashu /app/
 
 RUN chown -R feni /app
 
