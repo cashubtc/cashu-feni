@@ -187,7 +187,6 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 // @Tags POST
 func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 	pr := r.URL.Query().Get("payment_hash")
-	amounts := make([]int64, 0)
 	mintRequest := MintRequest{BlindedMessages: make(cashu.BlindedMessages, 0)}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&mintRequest)
@@ -195,7 +194,7 @@ func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	promises, err := api.Mint.Mint(mintRequest.BlindedMessages, amounts, pr)
+	promises, err := api.Mint.MintWithoutKeySet(mintRequest.BlindedMessages, pr)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -266,6 +265,7 @@ func (api Api) getKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
 func (api Api) getKeySets(w http.ResponseWriter, r *http.Request) {
 	response := GetKeySetsResponse{KeySets: api.Mint.GetKeySetIds()}
 	res, err := json.Marshal(response)
@@ -329,7 +329,7 @@ func (api Api) split(w http.ResponseWriter, r *http.Request) {
 		payload.Outputs.BlindedMessages = payload.OutputData.BlindedMessages
 	}
 	outputs := payload.Outputs
-	fstPromise, sendPromise, err := api.Mint.Split(proofs, amount, outputs.BlindedMessages)
+	fstPromise, sendPromise, err := api.Mint.Split(proofs, amount, outputs.BlindedMessages, api.Mint.LoadKeySet(api.Mint.KeySetId))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return

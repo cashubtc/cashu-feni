@@ -33,6 +33,7 @@ type Mint struct {
 	// publicKeys map of amount:publicKey
 	//publicKeys map[int64]*secp256k1.PublicKey
 	keySets  map[string]*crypto.KeySet
+	KeySetId string
 	database db.MintStorage
 	client   lightning.Client
 }
@@ -56,6 +57,9 @@ func New(masterKey string, opt ...Options) *Mint {
 	})
 	return l
 }
+func (m Mint) LoadKeySet(id string) *crypto.KeySet {
+	return m.keySets[id]
+}
 
 var couldNotCreateClient = fmt.Errorf("could not create lightning client. Please check your configuration")
 
@@ -75,8 +79,9 @@ type Options func(l *Mint)
 
 func WithInitialKeySet(masterKey, derivationPath string) Options {
 	return func(l *Mint) {
-		l.keySets[masterKey] = crypto.NewKeySet(masterKey, derivationPath)
-
+		k := crypto.NewKeySet(masterKey, derivationPath)
+		l.keySets[k.Id] = k
+		l.KeySetId = k.Id
 	}
 }
 
@@ -92,6 +97,9 @@ func WithStorage(database db.MintStorage) Options {
 	}
 }
 func (m Mint) GetKeySetIds() []string {
+	return lo.Keys(m.keySets)
+}
+func (m Mint) GetKeySet() []string {
 	return lo.Keys(m.keySets)
 }
 
@@ -166,10 +174,9 @@ func (m *Mint) payLightningInvoice(pr string, feeLimitMSat int64) (lightning.Pay
 	}
 	return m.client.InvoiceStatus(invoice.GetHash())
 }
-
-// mint generates promises for keys. checks lightning invoice before creating promise.
-func (m *Mint) Mint(messages cashu.BlindedMessages, amounts []int64, pr string) ([]cashu.BlindedSignature, error) {
+func (m Mint) mint(messages cashu.BlindedMessages, pr string, keySet *crypto.KeySet) ([]cashu.BlindedSignature, error) {
 	publicKeys := make([]*secp256k1.PublicKey, 0)
+	var amounts []int64
 	for _, msg := range messages {
 		amounts = append(amounts, msg.Amount)
 		hkey := make([]byte, 0)
@@ -192,7 +199,7 @@ func (m *Mint) Mint(messages cashu.BlindedMessages, amounts []int64, pr string) 
 	}
 	promises := make([]cashu.BlindedSignature, 0)
 	for i, key := range publicKeys {
-		sig, err := m.generatePromise(amounts[i], key)
+		sig, err := m.generatePromise(amounts[i], keySet, key)
 		if err != nil {
 			return nil, err
 		}
@@ -200,10 +207,18 @@ func (m *Mint) Mint(messages cashu.BlindedMessages, amounts []int64, pr string) 
 	}
 	return promises, nil
 }
+func (m Mint) Mint(messages cashu.BlindedMessages, pr string, keySet *crypto.KeySet) ([]cashu.BlindedSignature, error) {
+	// mint generates promises for keys. checks lightning invoice before creating promise.
+	return m.mint(messages, pr, keySet)
+}
+func (m Mint) MintWithoutKeySet(messages cashu.BlindedMessages, pr string) ([]cashu.BlindedSignature, error) {
+	// mint generates promises for keys. checks lightning invoice before creating promise.
+	return m.mint(messages, pr, m.LoadKeySet(m.KeySetId))
+}
 
 // generatePromise will generate promise and signature for given amount using public key
-func (m *Mint) generatePromise(amount int64, B_ *secp256k1.PublicKey) (cashu.BlindedSignature, error) {
-	C_ := crypto.SecondStepBob(*B_, *m.keySets[m.masterKey].PrivateKeys[amount])
+func (m *Mint) generatePromise(amount int64, keySet *crypto.KeySet, B_ *secp256k1.PublicKey) (cashu.BlindedSignature, error) {
+	C_ := crypto.SecondStepBob(*B_, *m.keySets[keySet.Id].PrivateKeys.ByAmount(amount).Key)
 	err := m.database.StorePromise(cashu.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
 	if err != nil {
 		return cashu.BlindedSignature{}, err
@@ -212,10 +227,10 @@ func (m *Mint) generatePromise(amount int64, B_ *secp256k1.PublicKey) (cashu.Bli
 }
 
 // generatePromises will generate multiple promises and signatures
-func (m *Mint) generatePromises(amounts []int64, keys []*secp256k1.PublicKey) ([]cashu.BlindedSignature, error) {
+func (m *Mint) generatePromises(amounts []int64, keySet *crypto.KeySet, keys []*secp256k1.PublicKey) ([]cashu.BlindedSignature, error) {
 	promises := make([]cashu.BlindedSignature, 0)
 	for i, key := range keys {
-		p, err := m.generatePromise(amounts[i], key)
+		p, err := m.generatePromise(amounts[i], keySet, key)
 		if err != nil {
 			return nil, err
 		}
@@ -229,7 +244,7 @@ func (m *Mint) verifyProof(proof cashu.Proof) error {
 	if !m.checkSpendable(proof) {
 		return fmt.Errorf("tokens already spent. Secret: %s", proof.Secret)
 	}
-	secretKey := m.keySets[m.masterKey].PrivateKeys[proof.Amount]
+	secretKey := m.keySets[m.KeySetId].PrivateKeys.ByAmount(proof.Amount).Key
 	pubKey, err := hex.DecodeString(proof.C)
 	if err != nil {
 		return err
@@ -407,8 +422,8 @@ func (m *Mint) invalidateProofs(proofs []cashu.Proof) error {
 // GetPublicKeys will return current public keys for all amounts
 func (m *Mint) GetPublicKeys() map[int64]string {
 	ret := make(map[int64]string, 0)
-	for i, key := range m.keySets[m.masterKey].PublicKeys {
-		ret[i] = hex.EncodeToString(key.SerializeCompressed())
+	for _, key := range m.keySets[m.KeySetId].PublicKeys {
+		ret[key.Amount] = hex.EncodeToString(key.Key.SerializeCompressed())
 	}
 	return ret
 }
@@ -452,7 +467,7 @@ func (m *Mint) Melt(proofs []cashu.Proof, amount int64, invoice string) (payment
 }
 
 // split will split proofs. creates BlindedSignatures from BlindedMessages.
-func (m *Mint) Split(proofs []cashu.Proof, amount int64, outputs []cashu.BlindedMessage) ([]cashu.BlindedSignature, []cashu.BlindedSignature, error) {
+func (m *Mint) Split(proofs []cashu.Proof, amount int64, outputs []cashu.BlindedMessage, keySet *crypto.KeySet) ([]cashu.BlindedSignature, []cashu.BlindedSignature, error) {
 	total := lo.SumBy[cashu.Proof](proofs, func(p cashu.Proof) int64 {
 		return p.Amount
 	})
@@ -546,11 +561,11 @@ func (m *Mint) Split(proofs []cashu.Proof, amount int64, outputs []cashu.Blinded
 		B_snd = append(B_snd, key)
 	}
 	// create promises for outputs
-	fstPromise, err := m.generatePromises(outsFts, B_fst)
+	fstPromise, err := m.generatePromises(outsFts, keySet, B_fst)
 	if err != nil {
 		return nil, nil, err
 	}
-	sendPromise, err := m.generatePromises(outsSnd, B_snd)
+	sendPromise, err := m.generatePromises(outsSnd, keySet, B_snd)
 	if err != nil {
 		return nil, nil, err
 	}
