@@ -37,10 +37,11 @@ func New() *Api {
 		Mint: mint.New(Config.Mint.PrivateKey,
 			mint.WithClient(lnBitsClient),
 			mint.WithStorage(sqlStorage),
+			mint.WithInitialKeySet(Config.Mint.PrivateKey, Config.Mint.DerivationPath),
 		),
 	}
 
-	m.HttpServer.Handler = newRouter(*m)
+	m.HttpServer.Handler = newRouter(m)
 	log.Trace("created mint server")
 	return m
 }
@@ -75,11 +76,11 @@ func (api Api) StartServer() {
 		log.Println(api.HttpServer.ListenAndServe())
 	}
 }
-func newRouter(a Api) *mux.Router {
+func newRouter(a *Api) *mux.Router {
 	router := mux.NewRouter()
 	// route to receive mint public keys
 	router.HandleFunc("/keys", Use(a.getKeys, LoggingMiddleware)).Methods(http.MethodGet)
-	router.HandleFunc("/keysets", Use(a.getKeysets, LoggingMiddleware)).Methods(http.MethodGet)
+	router.HandleFunc("/keysets", Use(a.getKeySets, LoggingMiddleware)).Methods(http.MethodGet)
 	// route to get mint (create tokens)
 	router.HandleFunc("/mint", Use(a.getMint, LoggingMiddleware)).Methods(http.MethodGet)
 	// route to real mint (with LIGHTNING enabled)
@@ -186,7 +187,6 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 // @Tags POST
 func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 	pr := r.URL.Query().Get("payment_hash")
-	amounts := make([]int64, 0)
 	mintRequest := MintRequest{BlindedMessages: make(cashu.BlindedMessages, 0)}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&mintRequest)
@@ -194,7 +194,7 @@ func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	promises, err := api.Mint.Mint(mintRequest.BlindedMessages, amounts, pr)
+	promises, err := api.Mint.MintWithoutKeySet(mintRequest.BlindedMessages, pr)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -265,8 +265,15 @@ func (api Api) getKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func (api Api) getKeysets(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(`{"keysets":{}}`))
+
+func (api Api) getKeySets(w http.ResponseWriter, r *http.Request) {
+	response := GetKeySetsResponse{KeySets: api.Mint.GetKeySetIds()}
+	res, err := json.Marshal(response)
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
+	w.Write(res)
 }
 
 // check is the http handler function for POST /check
@@ -322,7 +329,7 @@ func (api Api) split(w http.ResponseWriter, r *http.Request) {
 		payload.Outputs.BlindedMessages = payload.OutputData.BlindedMessages
 	}
 	outputs := payload.Outputs
-	fstPromise, sendPromise, err := api.Mint.Split(proofs, amount, outputs.BlindedMessages)
+	fstPromise, sendPromise, err := api.Mint.Split(proofs, amount, outputs.BlindedMessages, api.Mint.LoadKeySet(api.Mint.KeySetId))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return

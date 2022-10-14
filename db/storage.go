@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/gohumble/cashu-feni/crypto"
 	"github.com/gohumble/cashu-feni/lightning"
 )
 
@@ -12,5 +13,5 @@ type MintStorage interface {
 	StoreLightningInvoice(i lightning.Invoice) error
 	GetLightningInvoice(hash string) (lightning.Invoice, error)
 	UpdateLightningInvoice(hash string, issued bool) error
-	Migrate(cashu.Proof, cashu.Promise, lightning.Invoice) error
+	Migrate(cashu.Proof, cashu.Promise, crypto.KeySet, lightning.Invoice) error
 }

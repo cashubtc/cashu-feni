@@ -26,6 +26,9 @@ type SplitResponse struct {
 	Fst string
 	Snd string
 }
+type GetKeySetsResponse struct {
+	KeySets []string `json:"keysets"`
+}
 type GetMintResponse struct {
 	Pr   string
 	Hash string

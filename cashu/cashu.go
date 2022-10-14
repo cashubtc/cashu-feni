@@ -9,6 +9,7 @@ import (
 )
 
 type Proof struct {
+	Id           string `json:"id"`
 	Amount       int64  `json:"amount"`
 	Secret       string `json:"secret" gorm:"primaryKey"`
 	C            string `json:"C"`
