@@ -142,15 +142,20 @@ func TestCreateInvoice(t *testing.T) {
 	}{
 		{name: "createNoInvoice", want: nil},
 		{name: "createInvoice", want: &lnbits.Invoice{}},
+		{name: "lightningOnly", want: nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.name == "createInvoice" {
+			switch tt.name {
+			case "createInvoice":
 				lightning.Config.Lightning.Lnbits = &lightning.LnbitsConfig{}
 				lightning.Config.Lightning.Enabled = true
+			case "lightningOnly":
+				lightning.Config.Lightning.Enabled = true
+				lightning.Config.Lightning.Lnbits = nil
 			}
 			if got := CreateInvoice(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CreateInvoice() = %v, want %v", got, tt.want)
+				t.Errorf("%s = %v, want %v", tt.name, got, tt.want)
 			}
 		})
 	}
