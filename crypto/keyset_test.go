@@ -65,10 +65,10 @@ func TestNewKeySet(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := NewKeySet(tt.args.masterKey, tt.args.derivationPath)
 			if len(got.PublicKeys) != len(got.PrivateKeys) {
-				t.Errorf("invalid keysets")
+				t.Errorf("invalid keysets, got: %d", len(got.PublicKeys))
 			}
 			if got.Id != "JHV8eUnoAln/" {
-				t.Errorf("invalid id")
+				t.Errorf("invalid id, got: %s", got.Id)
 			}
 		})
 	}
@@ -90,7 +90,7 @@ func TestKeySet_DeriveKeys(t *testing.T) {
 			k := NewKeySet("master", "0/0/0/0")
 			k.DeriveKeys(tt.args.masterKey)
 			if len(k.PrivateKeys) == 0 {
-				t.Errorf("failed to DeriveKeys")
+				t.Errorf("failed to DeriveKeys, got: %d", len(k.PublicKeys))
 			}
 		})
 	}
@@ -109,7 +109,7 @@ func TestKeySet_DerivePublicKeys(t *testing.T) {
 			ks.DeriveKeys("master")
 			ks.DerivePublicKeys()
 			if len(ks.PublicKeys) == 0 {
-				t.Errorf("failed to DeriveKeys")
+				t.Errorf("failed to DeriveKeys, got: %d", len(ks.PublicKeys))
 			}
 		})
 	}
@@ -129,7 +129,7 @@ func TestKeySet_DeriveKeySetId(t *testing.T) {
 			k.DerivePublicKeys()
 			k.DeriveKeySetId()
 			if k.Id != "JHV8eUnoAln/" {
-				t.Errorf("failed to TestKeySet_DeriveKeySetId")
+				t.Errorf("failed to TestKeySet_DeriveKeySetId, got: %s", k.Id)
 			}
 		})
 	}
