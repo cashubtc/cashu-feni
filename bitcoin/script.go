@@ -35,7 +35,8 @@ func Step1BobCarolCreateTx(txInP2SHAddress []byte) (*wire.MsgTx, error) {
 	if err != nil {
 		return nil, err
 	}
-	txin = append(txin, &wire.TxIn{PreviousOutPoint: *wire.NewOutPoint(h, 0)})
+	// set the sequence number to uint32 max, because python btc library does this as well.
+	txin = append(txin, &wire.TxIn{PreviousOutPoint: *wire.NewOutPoint(h, 0), Sequence: 4294967295})
 	tx.TxIn = txin
 
 	txout := make([]*wire.TxOut, 0)
@@ -49,18 +50,6 @@ func Step1BobCarolCreateTx(txInP2SHAddress []byte) (*wire.MsgTx, error) {
 	return tx, nil
 
 }
-func pushDataScript(items ...[]byte) []byte {
-	builder := txscript.NewScriptBuilder()
-	builder.AddOp(txscript.OP_0)
-	for _, item := range items {
-		builder.AddData(item)
-	}
-	script, err := builder.Script()
-	if err != nil {
-		panic(err)
-	}
-	return script
-}
 func Step3BobVerifyScript(txInSignature, txInRedeemScript []byte, tx *wire.MsgTx) error {
 	txInScriptPubKey, err := input.GenerateP2SH(txInRedeemScript)
 	if err != nil {
@@ -68,8 +57,6 @@ func Step3BobVerifyScript(txInSignature, txInRedeemScript []byte, tx *wire.MsgTx
 	}
 	// set the received signature script
 	tx.TxIn[0].SignatureScript = txInSignature
-	// set the sequence number to uint32 max, because python btc library does this as well.
-	tx.TxIn[0].Sequence = 4294967295
 	if txscript.IsPayToScriptHash(txInScriptPubKey) {
 		vm, err := txscript.NewEngine(
 			txInScriptPubKey, tx, 0,
