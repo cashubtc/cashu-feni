@@ -13,14 +13,15 @@ import (
 // Configuration for lnbits
 type Configuration struct {
 	Lightning struct {
-		Enabled bool `json:"enabled" yaml:"enabled"`
-		Lnbits  *struct {
-			LightningFeePercent    float64 `json:"lightning_fee_percent" yaml:"lightning_fee_percent"`
-			LightningReserveFeeMin float64 `json:"lightning_reserve_fee_min" yaml:"lightning_reserve_fee_min"`
-			AdminKey               string  `yaml:"admin_key"`
-			Url                    string  `yaml:"url"`
-		} `json:"lnbits" yaml:"lnbits"`
+		Enabled bool          `json:"enabled" yaml:"enabled"`
+		Lnbits  *LnbitsConfig `json:"lnbits" yaml:"lnbits"`
 	} `json:"lightning" json:"lightning"`
+}
+type LnbitsConfig struct {
+	LightningFeePercent    float64 `json:"lightning_fee_percent" yaml:"lightning_fee_percent"`
+	LightningReserveFeeMin float64 `json:"lightning_reserve_fee_min" yaml:"lightning_reserve_fee_min"`
+	AdminKey               string  `yaml:"admin_key"`
+	Url                    string  `yaml:"url"`
 }
 
 var Config Configuration

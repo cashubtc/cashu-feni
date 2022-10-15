@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/gohumble/cashu-feni/lightning"
+	"github.com/gohumble/cashu-feni/lightning/lnbits"
 	"reflect"
 	"testing"
 	"time"
@@ -140,9 +141,14 @@ func TestCreateInvoice(t *testing.T) {
 		want lightning.Invoice
 	}{
 		{name: "createNoInvoice", want: nil},
+		{name: "createInvoice", want: &lnbits.Invoice{}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.name == "createInvoice" {
+				lightning.Config.Lightning.Lnbits = &lightning.LnbitsConfig{}
+				lightning.Config.Lightning.Enabled = true
+			}
 			if got := CreateInvoice(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CreateInvoice() = %v, want %v", got, tt.want)
 			}
