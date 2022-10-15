@@ -11,15 +11,15 @@ jobs:
         poetry-version: [ "1.2.1" ]
     steps:
       - uses: actions/checkout@v3
-      - name: Golang run tests
-        run: go test -coverprofile=coverage.txt -covermode=atomic -v ./...
-      - uses: codecov/codecov-action@v3
-        with:
-          verbose: true # optional (default = false)
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: 1.19
+      - name: Golang run tests
+          run: go test -coverprofile=coverage.txt -covermode=atomic -v ./...
+      - uses: codecov/codecov-action@v3
+        with:
+          verbose: true # optional (default = false)
       - name: Build
         run: go build -v -o cashu-feni cmd/cashu/mint.go
       - name: Run Cashu Feni
