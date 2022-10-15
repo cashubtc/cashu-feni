@@ -9,7 +9,7 @@ type PublicKey struct {
 
 type PublicKeyList []PublicKey
 
-func (s PublicKeyList) ByAmount(amount int64) *PublicKey {
+func (s PublicKeyList) GetKeyByAmount(amount int64) *PublicKey {
 	for _, key := range s {
 		if key.Amount == amount {
 			return &key
@@ -18,7 +18,7 @@ func (s PublicKeyList) ByAmount(amount int64) *PublicKey {
 	return nil
 }
 
-func (s PrivateKeyList) ByAmount(amount int64) *PrivateKey {
+func (s PrivateKeyList) GetKeyByAmount(amount int64) *PrivateKey {
 	for _, key := range s {
 		if key.Amount == amount {
 			return &key

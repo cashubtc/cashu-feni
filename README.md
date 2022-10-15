@@ -4,6 +4,7 @@
 [![GoReportCard example](https://goreportcard.com/badge/github.com/gohumble/cashu-feni)](https://goreportcard.com/report/github.com/gohumble/cashu-feni)
 [![Docker](https://badgen.net/badge/icon/docker?icon=docker&label)](https://https://docker.com/)
 [![Github tag](https://badgen.net/github/tag/gohumble/cashu-feni)](https://github.com/gohumble/cashu-feni/tags/)
+[![codecov](https://codecov.io/gh/gohumble/cashu-feni/branch/master/graph/badge.svg)](https://codecov.io/gh/gohumble/cashu-feni)
 
 <html>
 <simple-boost amount="2100" address="hello@getalby.com"></simple-boost>

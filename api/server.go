@@ -37,7 +37,7 @@ func New() *Api {
 		Mint: mint.New(Config.Mint.PrivateKey,
 			mint.WithClient(lnBitsClient),
 			mint.WithStorage(sqlStorage),
-			mint.WithInitialKeySet(Config.Mint.PrivateKey, Config.Mint.DerivationPath),
+			mint.WithInitialKeySet(Config.Mint.DerivationPath),
 		),
 	}
 
