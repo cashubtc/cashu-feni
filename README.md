@@ -1,4 +1,5 @@
 # cashu-feni
+
 [![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg)](https://go.dev/)
 [![GoReportCard example](https://goreportcard.com/badge/github.com/gohumble/cashu-feni)](https://goreportcard.com/report/github.com/gohumble/cashu-feni)
 [![Docker](https://badgen.net/badge/icon/docker?icon=docker&label)](https://https://docker.com/)
@@ -19,7 +20,9 @@ which implements a [Blind Diffie-Hellman Key Exchange](https://cypherpunks.venon
 written down by Ruben Somsen [here](https://gist.github.com/RubenSomsen/be7a4760dd4596d06963d67baf140406). The database
 mechanics and the Lightning backend uses parts from [LNbits](https://github.com/lnbits/lnbits-legend).
 
-Please read the [Cashu](https://github.com/callebtc/cashu) documentation.
+Please read the [Cashu](https://github.com/callebtc/cashu) documentation for more detailed information.
+
+This project aims to replicate the python mint implementation of cashu.
 
 # Install
 
@@ -33,6 +36,8 @@ Please read the [Cashu](https://github.com/callebtc/cashu) documentation.
 
 These steps will help you installing cashu-feni from source.
 
+Please install the cashu client using ```pip install cashu```
+
 ### Requirements
 
 * [golang](https://go.dev/dl/)
@@ -43,7 +48,7 @@ These steps will help you installing cashu-feni from source.
 git clone https://github.com/gohumble/cashu-feni && cd cashu-feni
 ```
 
-copy `config_example.yaml` to `config.yaml` and update configuration values
+Copy `config_example.yaml` to `config.yaml` and update configuration values
 
 ```bash
 go build . && ./cashu-feni
@@ -62,7 +67,9 @@ docker run -it -p 3338:3338 \
 -v $(pwd)/data/:/app/data/ \
 gohumble/cashu-feni
 ```
+
 Mounting custom `config.yaml` to `/app/config.yaml`
+
 ```bash
 docker run -it -p 3338:3338 \
 -v $(pwd)/config.yaml:/app/config.yaml \
