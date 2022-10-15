@@ -11,9 +11,6 @@ jobs:
         poetry-version: [ "1.2.1" ]
     steps:
       - uses: actions/checkout@v3
-      - uses: codecov/codecov-action@v3
-        with:
-          verbose: true # optional (default = false)
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
@@ -23,7 +20,10 @@ jobs:
       - name: Run Cashu Feni
         run: nohup go run cmd/cashu/mint.go &
       - name: Golang run tests
-        run: go test -v ./...
+        run: go test -coverprofile=coverage.txt -covermode=atomic -v ./...
+      - uses: codecov/codecov-action@v3
+          with:
+            verbose: true # optional (default = false)
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
