@@ -51,10 +51,12 @@ func New(masterKey string, opt ...Options) *Mint {
 	for _, o := range opt {
 		o(l)
 	}
+	if l.database != nil {
+		lo.ForEach[cashu.Proof](l.database.GetUsedProofs(), func(proof cashu.Proof, i int) {
+			l.proofsUsed = append(l.proofsUsed, proof.Secret)
+		})
+	}
 
-	lo.ForEach[cashu.Proof](l.database.GetUsedProofs(), func(proof cashu.Proof, i int) {
-		l.proofsUsed = append(l.proofsUsed, proof.Secret)
-	})
 	return l
 }
 func (m Mint) LoadKeySet(id string) *crypto.KeySet {
@@ -77,9 +79,9 @@ func NewLightningClient() (lightning.Client, error) {
 
 type Options func(l *Mint)
 
-func WithInitialKeySet(masterKey, derivationPath string) Options {
+func WithInitialKeySet(derivationPath string) Options {
 	return func(l *Mint) {
-		k := crypto.NewKeySet(masterKey, derivationPath)
+		k := crypto.NewKeySet(l.masterKey, derivationPath)
 		l.keySets[k.Id] = k
 		l.KeySetId = k.Id
 	}
@@ -105,6 +107,12 @@ func (m Mint) GetKeySet() []string {
 
 // requestMint will create and return the lightning invoice for a mint
 func (m *Mint) RequestMint(amount int64) (lightning.Invoice, error) {
+	if m.client == nil {
+		invoice := lnbits.NewInvoice()
+		invoice.SetAmount(amount)
+		invoice.SetHash("invalid")
+		return invoice, nil
+	}
 	invoice, err := m.client.CreateInvoice(amount, "requested feni mint")
 	if err != nil {
 		return invoice, err

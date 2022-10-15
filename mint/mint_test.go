@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/gohumble/cashu-feni/crypto"
+	"github.com/gohumble/cashu-feni/db"
+	"github.com/gohumble/cashu-feni/lightning"
+	"github.com/gohumble/cashu-feni/lightning/lnbits"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -79,5 +83,58 @@ func Test_Steps(t *testing.T) {
 	A2Pub := secp256k1.NewPublicKey(&A3.X, &A3.Y)
 	if !bytes.Equal(A2Pub.Y().Add(A2Pub.Y(), A2Pub.Y().Add(A2Pub.Y().Neg(A2Pub.Y()), A2Pub.Y().Neg(A2Pub.Y()))).Bytes(), A2Pub.Y().Neg(A2Pub.Y()).Bytes()) {
 		t.Errorf("assert -A -A + A == -A  should be true ==  %v\n", false)
+	}
+}
+
+func TestMint_LoadKeySet(t *testing.T) {
+	type args struct {
+		id string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *crypto.KeySet
+	}{
+		{name: "loadKeySet"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := New("master", WithInitialKeySet("0/0/0/0"))
+			if m.LoadKeySet("JHV8eUnoAln/") != nil || m.LoadKeySet("+9FmGFiI7s8w") != nil {
+				return
+			}
+			t.Errorf("LoadKeySet()")
+		})
+	}
+}
+
+func TestMint_RequestMint(t *testing.T) {
+	type args struct {
+		amount int64
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    lightning.Invoice
+		wantErr bool
+	}{
+		{name: "request_mint", args: args{amount: 10}, wantErr: false, want: &lnbits.Invoice{Amount: 10, Hash: "invalid"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("LIGHTNING", "false")
+			m := New("master", WithStorage(db.NewSqlDatabase()))
+			got, err := m.RequestMint(tt.args.amount)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RequestMint() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got.GetHash() == "" {
+				t.Errorf("RequestMint() got = %v, want %v", got, tt.want)
+			}
+			if got.GetAmount() != tt.args.amount {
+				t.Errorf("RequestMint() got = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
