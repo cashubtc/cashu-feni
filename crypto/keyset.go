@@ -23,7 +23,7 @@ type KeySet struct {
 	ValidFrom      time.Time
 	ValidTo        time.Time
 	FirstSeen      time.Time
-	Active         time.Time
+	Active         bool
 }
 
 func NewKeySet(masterKey, derivationPath string) *KeySet {
