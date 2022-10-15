@@ -49,12 +49,8 @@ func HashToCurve(secretMessage []byte) *secp256k1.PublicKey {
 }
 
 // FirstStepAlice creates blinded secrets and produces outputs
-func FirstStepAlice(secretMessage string) (*secp256k1.PublicKey, *secp256k1.PrivateKey) {
+func FirstStepAlice(secretMessage string, r *secp256k1.PrivateKey) (*secp256k1.PublicKey, *secp256k1.PrivateKey) {
 	Y := HashToCurve([]byte(secretMessage))
-	r, err := secp256k1.GeneratePrivateKey()
-	if err != nil {
-		panic(err)
-	}
 	var pointr, pointy, result secp256k1.JacobianPoint
 
 	r.PubKey().AsJacobian(&pointr)
@@ -65,7 +61,7 @@ func FirstStepAlice(secretMessage string) (*secp256k1.PublicKey, *secp256k1.Priv
 	return B_, r
 }
 
-// SecondStepBob signes blinded secrets and produces promises
+// SecondStepBob signs blinded secrets and produces promises
 func SecondStepBob(B_ secp256k1.PublicKey, a secp256k1.PrivateKey) *secp256k1.PublicKey {
 	var pointB_, Cp_ secp256k1.JacobianPoint
 	B_.AsJacobian(&pointB_)

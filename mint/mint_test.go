@@ -39,7 +39,12 @@ func Test_Steps(t *testing.T) {
 	}
 	A := a.PubKey()
 	secretMessage := "HI"
-	B_, r := crypto.FirstStepAlice(secretMessage)
+	r, err := secp256k1.GeneratePrivateKey()
+	if err != nil {
+		panic(err)
+	}
+
+	B_, r := crypto.FirstStepAlice(secretMessage, r)
 	C_ := crypto.SecondStepBob(*B_, *a)
 	C := crypto.ThirdStepAlice(*C_, *r, *A)
 	fmt.Printf("secretMessage: %s\n", secretMessage)
