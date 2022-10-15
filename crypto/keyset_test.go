@@ -120,7 +120,7 @@ func TestKeySet_DeriveKeySetId(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
-		{name: "DerivePublicKeys"},
+		{name: "DeriveKeySetId"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
