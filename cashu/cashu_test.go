@@ -164,7 +164,7 @@ func TestCreateInvoice(t *testing.T) {
 func TestProof_Decode(t *testing.T) {
 	type fields struct {
 		Id           string
-		Amount       int64
+		Amount       uint64
 		Secret       string
 		C            string
 		reserved     bool

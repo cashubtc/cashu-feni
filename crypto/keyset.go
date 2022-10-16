@@ -52,7 +52,7 @@ func deriveKeys(masterKey string, derivationPath string) PrivateKeyList {
 	for i := 0; i < MaxOrder; i++ {
 		hasher := sha256.New()
 		hasher.Write([]byte(masterKey + derivationPath + strconv.Itoa(i)))
-		pk = append(pk, PrivateKey{Amount: int64(math.Pow(2, float64(i))), Key: secp256k1.PrivKeyFromBytes(hasher.Sum(nil)[:32])})
+		pk = append(pk, PrivateKey{Amount: uint64(math.Pow(2, float64(i))), Key: secp256k1.PrivKeyFromBytes(hasher.Sum(nil)[:32])})
 	}
 	sort.Sort(pk)
 	return pk

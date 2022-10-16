@@ -50,7 +50,7 @@ func NewInvoice() lightning.Invoice {
 }
 
 // Invoice creates an invoice associated with this wallet.
-func (c *Client) CreateInvoice(amount int64, memo string) (lightning.Invoice, error) {
+func (c *Client) CreateInvoice(amount uint64, memo string) (lightning.Invoice, error) {
 	params := InvoiceParams{Amount: amount, Memo: memo}
 	resp, err := req.Post(c.url+"/api/v1/payments", c.header, req.BodyJSON(&params))
 	if err != nil {

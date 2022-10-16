@@ -44,7 +44,7 @@ func Test_deriveKeySetId(t *testing.T) {
 			path1 := deriveKeys("master", "0/0/0/0")
 			got := deriveKeySetId(derivePublicKeys(path1))
 			// due to different result on github action
-			if got == "+9FmGFiI7s8w" || got == tt.want {
+			if got == tt.want {
 				return
 			}
 			t.Errorf("deriveKeySetId() = %v, want %v", got, tt.want)
@@ -71,7 +71,7 @@ func TestNewKeySet(t *testing.T) {
 				t.Errorf("invalid keysets, got: %d", len(got.PublicKeys))
 			}
 			// due to different result on github action
-			if got.Id == "JHV8eUnoAln/" || got.Id == "+9FmGFiI7s8w" {
+			if got.Id == "JHV8eUnoAln/" {
 				return
 			}
 			t.Errorf("invalid id, got: %s", got.Id)
@@ -134,7 +134,7 @@ func TestKeySet_DeriveKeySetId(t *testing.T) {
 			k.DerivePublicKeys()
 			k.DeriveKeySetId()
 			// due to different result on github action
-			if k.Id == "JHV8eUnoAln/" || k.Id == "+9FmGFiI7s8w" {
+			if k.Id == "JHV8eUnoAln/" {
 				return
 			}
 			t.Errorf("failed to TestKeySet_DeriveKeySetId, got: %s", k.Id)

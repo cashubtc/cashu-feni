@@ -3,13 +3,13 @@ package crypto
 import "github.com/decred/dcrd/dcrec/secp256k1/v4"
 
 type PublicKey struct {
-	Amount int64
+	Amount uint64
 	Key    *secp256k1.PublicKey
 }
 
 type PublicKeyList []PublicKey
 
-func (s PublicKeyList) GetKeyByAmount(amount int64) *PublicKey {
+func (s PublicKeyList) GetKeyByAmount(amount uint64) *PublicKey {
 	for _, key := range s {
 		if key.Amount == amount {
 			return &key
@@ -18,7 +18,7 @@ func (s PublicKeyList) GetKeyByAmount(amount int64) *PublicKey {
 	return nil
 }
 
-func (s PrivateKeyList) GetKeyByAmount(amount int64) *PrivateKey {
+func (s PrivateKeyList) GetKeyByAmount(amount uint64) *PrivateKey {
 	for _, key := range s {
 		if key.Amount == amount {
 			return &key
@@ -32,7 +32,7 @@ func (s PublicKeyList) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s PublicKeyList) Less(i, j int) bool { return s[i].Amount < s[j].Amount }
 
 type PrivateKey struct {
-	Amount int64
+	Amount uint64
 	Key    *secp256k1.PrivateKey
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/gohumble/cashu-feni/db"
 	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/lightning/lnbits"
+	"math"
 	"os"
 	"reflect"
 	"testing"
@@ -15,16 +16,16 @@ import (
 
 func Test_amountSplit(t *testing.T) {
 	type args struct {
-		amount int64
+		amount uint64
 	}
 	tests := []struct {
 		name string
 		args args
-		want []int64
+		want []uint64
 	}{
-		{name: "13", args: args{amount: 13}, want: []int64{1, 4, 8}},
-		{name: "12", args: args{amount: 12}, want: []int64{4, 8}},
-		{name: "512", args: args{amount: 512}, want: []int64{512}},
+		{name: "13", args: args{amount: 13}, want: []uint64{1, 4, 8}},
+		{name: "12", args: args{amount: 12}, want: []uint64{4, 8}},
+		{name: "512", args: args{amount: 512}, want: []uint64{512}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,7 +101,7 @@ func TestMint_LoadKeySet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := New("master", WithInitialKeySet("0/0/0/0"))
-			if m.LoadKeySet("JHV8eUnoAln/") != nil || m.LoadKeySet("+9FmGFiI7s8w") != nil {
+			if m.LoadKeySet("JHV8eUnoAln/") != nil {
 				return
 			}
 			t.Errorf("LoadKeySet()")
@@ -110,7 +111,7 @@ func TestMint_LoadKeySet(t *testing.T) {
 
 func TestMint_RequestMint(t *testing.T) {
 	type args struct {
-		amount int64
+		amount uint64
 	}
 	tests := []struct {
 		name    string
@@ -134,6 +135,33 @@ func TestMint_RequestMint(t *testing.T) {
 			}
 			if got.GetAmount() != tt.args.amount {
 				t.Errorf("RequestMint() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_verifyAmount(t *testing.T) {
+	type args struct {
+		amount uint64
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    uint64
+		wantErr bool
+	}{
+		{name: "verifyAmount", want: 123, args: args{amount: 123}},
+		{name: "verifyAmountMax", want: uint64(math.Pow(2, MaxOrder)), args: args{amount: uint64(math.Pow(2, MaxOrder))}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := verifyAmount(tt.args.amount)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("verifyAmount() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("verifyAmount() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

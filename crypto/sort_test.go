@@ -7,7 +7,7 @@ import (
 
 func TestPublicKeyList_ByAmount(t *testing.T) {
 	type args struct {
-		amount int64
+		amount uint64
 	}
 	tests := []struct {
 		name string
@@ -16,6 +16,7 @@ func TestPublicKeyList_ByAmount(t *testing.T) {
 		want *PublicKey
 	}{
 		{name: "TestPublicKeyList_ByAmount", args: args{amount: 2}, s: PublicKeyList{PublicKey{Amount: 1}, PublicKey{Amount: 2}}, want: &PublicKey{Amount: 2}},
+		{name: "TestPublicKeyList_ByAmount_nil", args: args{amount: 2}, s: nil, want: nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -28,7 +29,7 @@ func TestPublicKeyList_ByAmount(t *testing.T) {
 
 func TestPrivateKeyList_ByAmount(t *testing.T) {
 	type args struct {
-		amount int64
+		amount uint64
 	}
 	tests := []struct {
 		name string
@@ -36,7 +37,8 @@ func TestPrivateKeyList_ByAmount(t *testing.T) {
 		args args
 		want *PrivateKey
 	}{
-		{name: "TestPublicKeyList_ByAmount", args: args{amount: 2}, s: PrivateKeyList{PrivateKey{Amount: 1}, PrivateKey{Amount: 2}}, want: &PrivateKey{Amount: 2}},
+		{name: "TestPrivateKeyList_ByAmount", args: args{amount: 2}, s: PrivateKeyList{PrivateKey{Amount: 1}, PrivateKey{Amount: 2}}, want: &PrivateKey{Amount: 2}},
+		{name: "TestPrivateKeyList_ByAmount_nil", args: args{amount: 2}, s: nil, want: nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

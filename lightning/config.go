@@ -48,9 +48,9 @@ func init() {
 
 }
 
-func FeeReserve(amountMsat int64, internal bool) int64 {
+func FeeReserve(amountMsat uint64, internal bool) uint64 {
 	if internal {
 		return 0
 	}
-	return int64(math.Max(Config.Lightning.Lnbits.LightningReserveFeeMin, float64(amountMsat)*Config.Lightning.Lnbits.LightningFeePercent/1000))
+	return uint64(math.Max(Config.Lightning.Lnbits.LightningReserveFeeMin, float64(amountMsat)*Config.Lightning.Lnbits.LightningFeePercent/1000))
 }

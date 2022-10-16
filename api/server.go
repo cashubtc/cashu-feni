@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/gohumble/cashu-feni/cashu"
@@ -9,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -153,7 +155,7 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Errorf("error checking amount")
 	}
-	invoice, err := api.Mint.RequestMint(int64(ai))
+	invoice, err := api.Mint.RequestMint(uint64(ai))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -316,10 +318,27 @@ func (api Api) check(w http.ResponseWriter, r *http.Request) {
 // @Tags POST
 func (api Api) split(w http.ResponseWriter, r *http.Request) {
 	payload := SplitRequest{}
-	decoder := json.NewDecoder(r.Body)
+	buf, _ := io.ReadAll(r.Body)
+	body := io.NopCloser(bytes.NewBuffer(buf))
+	bodyInvalidAmount := io.NopCloser(bytes.NewBuffer(buf))
+	decoder := json.NewDecoder(body)
 	err := decoder.Decode(&payload)
 	if err != nil {
-		panic(err)
+		switch err.(type) {
+		case *json.UnmarshalTypeError:
+			amt := struct {
+				Amount int64
+			}{}
+			decoder := json.NewDecoder(bodyInvalidAmount)
+			err := decoder.Decode(&amt)
+			if err == nil {
+				err = fmt.Errorf("invalid split amount: %d", amt.Amount)
+				responseError(w, cashu.NewErrorResponse(err))
+				return
+			}
+		}
+		responseError(w, cashu.NewErrorResponse(err))
+		return
 	}
 	proofs := payload.Proofs
 	amount := payload.Amount
