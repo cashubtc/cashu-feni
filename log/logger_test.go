@@ -61,3 +61,73 @@ func TestWithLoggable(t *testing.T) {
 		})
 	}
 }
+
+func TestNewRotateFileHook(t *testing.T) {
+	type args struct {
+		config RotateFileConfig
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    logrus.Hook
+		wantErr bool
+	}{
+		{name: "NewRotateFileHook", want: &RotateFileHook{Config: RotateFileConfig{Filename: "out.log"}}, args: args{RotateFileConfig{Filename: "out.log"}}, wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewRotateFileHook(tt.args.config)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewRotateFileHook() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got.(*RotateFileHook).Config, tt.want.(*RotateFileHook).Config) {
+				t.Errorf("NewRotateFileHook() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRotateFileHook_Levels(t *testing.T) {
+	tests := []struct {
+		name string
+		want []logrus.Level
+	}{
+		{name: "allLevels", want: logrus.AllLevels},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hook, err := NewRotateFileHook(RotateFileConfig{Level: logrus.TraceLevel})
+			if err != nil {
+				panic(err)
+			}
+			if got := hook.Levels(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Levels() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestToMap(t *testing.T) {
+	type args struct {
+		i interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string]interface{}
+	}{
+		{name: "toMap", args: args{i: struct {
+			Test string
+		}{
+			Test: "hi",
+		}}, want: map[string]interface{}{"Test": "hi"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ToMap(tt.args.i); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ToMap() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
