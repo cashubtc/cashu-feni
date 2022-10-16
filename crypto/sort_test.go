@@ -7,7 +7,7 @@ import (
 
 func TestPublicKeyList_ByAmount(t *testing.T) {
 	type args struct {
-		amount int64
+		amount uint64
 	}
 	tests := []struct {
 		name string
@@ -28,7 +28,7 @@ func TestPublicKeyList_ByAmount(t *testing.T) {
 
 func TestPrivateKeyList_ByAmount(t *testing.T) {
 	type args struct {
-		amount int64
+		amount uint64
 	}
 	tests := []struct {
 		name string
