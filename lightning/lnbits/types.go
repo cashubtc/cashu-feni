@@ -14,7 +14,7 @@ type Client struct {
 
 type InvoiceParams struct {
 	Out                 bool   `json:"out"`                            // must be True if invoice is paid, False if invoice is received
-	Amount              int64  `json:"amount"`                         // amount in Satoshi
+	Amount              uint64 `json:"amount"`                         // amount in Satoshi
 	Memo                string `json:"memo,omitempty"`                 // the invoice memo.
 	Webhook             string `json:"webhook,omitempty"`              // the webhook to fire back to when payment is received.
 	DescriptionHash     string `json:"description_hash,omitempty"`     // the invoice description hash.
@@ -24,7 +24,7 @@ type InvoiceParams struct {
 type PaymentParams struct {
 	Out          bool   `json:"out"`
 	Bolt11       string `json:"bolt11"`
-	FeeLimitMSat int64  `json:"feeLimitMSat"`
+	FeeLimitMSat uint64 `json:"feeLimitMSat"`
 }
 type PayParams struct {
 	// the BOLT11 payment request you want to pay.
@@ -36,7 +36,7 @@ type PayParams struct {
 
 type TransferParams struct {
 	Memo         string `json:"memo"`           // the transfer description.
-	NumSatoshis  int64  `json:"num_satoshis"`   // the transfer amount.
+	NumSatoshis  uint64 `json:"num_satoshis"`   // the transfer amount.
 	DestWalletId string `json:"dest_wallet_id"` // the key or id of the destination
 }
 
@@ -52,7 +52,7 @@ type Wallet struct {
 	ID       string `json:"id" gorm:"id"`
 	Adminkey string `json:"adminkey"`
 	Inkey    string `json:"inkey"`
-	Balance  int64  `json:"balance"`
+	Balance  uint64 `json:"balance"`
 	Name     string `json:"name"`
 	User     string `json:"user"`
 }
@@ -60,8 +60,8 @@ type Wallet struct {
 type PaymentDetails struct {
 	CheckingID    string      `json:"checking_id"`
 	Pending       bool        `json:"pending"`
-	Amount        int64       `json:"amount"`
-	Fee           int64       `json:"fee"`
+	Amount        uint64      `json:"amount"`
+	Fee           uint64      `json:"fee"`
 	Memo          string      `json:"memo"`
 	Time          int         `json:"time"`
 	Bolt11        string      `json:"bolt11"`
@@ -73,7 +73,7 @@ type PaymentDetails struct {
 	WebhookStatus interface{} `json:"webhook_status"`
 }
 type Invoice struct {
-	Amount int64  `json:"amount"`
+	Amount uint64 `json:"amount"`
 	Pr     string `json:"payment_request"`
 	Hash   string `json:"payment_hash" gorm:"primaryKey"`
 	Issued bool   `json:"issued"`
@@ -101,10 +101,10 @@ func (i *Invoice) SetIssued(issued bool) {
 	i.Issued = issued
 }
 
-func (i *Invoice) SetAmount(amount int64) {
+func (i *Invoice) SetAmount(amount uint64) {
 	i.Amount = amount
 }
-func (i *Invoice) GetAmount() int64 {
+func (i *Invoice) GetAmount() uint64 {
 	return i.Amount
 }
 func (i *Invoice) IsIssued() bool {

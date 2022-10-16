@@ -18,8 +18,8 @@ type Invoice interface {
 	SetIssued(i bool) // SetIssued to true, if lightning invoice was paid
 	IsIssued() bool   // IsIssued returns true, if lightning invoice is paid
 
-	SetAmount(a int64) // SetAmount of the lightning invoice
-	GetAmount() int64  // GetAmount of the lightning invoice
+	SetAmount(a uint64) // SetAmount of the lightning invoice
+	GetAmount() uint64  // GetAmount of the lightning invoice
 
 	GetPaymentRequest() string // GetPaymentRequest should return the payment request (probably bech encoded)
 }
@@ -32,7 +32,7 @@ type Payment interface {
 
 // Client should be able to perform lightning services
 type Client interface {
-	InvoiceStatus(paymentHash string) (Payment, error)        // InvoiceStatus should return Payment information for a payment hash
-	Pay(paymentRequest string) (Invoice, error)               // Pay should pay the payment request.
-	CreateInvoice(amount int64, memo string) (Invoice, error) // CreateInvoice should create an invoice for given amount and memo
+	InvoiceStatus(paymentHash string) (Payment, error)         // InvoiceStatus should return Payment information for a payment hash
+	Pay(paymentRequest string) (Invoice, error)                // Pay should pay the payment request.
+	CreateInvoice(amount uint64, memo string) (Invoice, error) // CreateInvoice should create an invoice for given amount and memo
 }

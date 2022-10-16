@@ -40,7 +40,8 @@ func init() {
 		Config.Mint.Tls.Enabled = false
 		Config.Mint.Host = "0.0.0.0"
 		Config.Mint.Port = "3338"
-		Config.Mint.PrivateKey = "not-very-secure"
+		Config.Mint.PrivateKey = "supersecretprivatekey"
+		Config.Mint.DerivationPath = "0/0/0/0"
 		Config.LogLevel = "trace"
 		Config.DocReference = "http://0.0.0.0:3338/swagger/doc.json"
 		cfg, err := json.Marshal(Config)
