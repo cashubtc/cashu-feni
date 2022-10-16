@@ -8,6 +8,7 @@ import (
 	"github.com/gohumble/cashu-feni/db"
 	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/lightning/lnbits"
+	"math"
 	"os"
 	"reflect"
 	"testing"
@@ -134,6 +135,33 @@ func TestMint_RequestMint(t *testing.T) {
 			}
 			if got.GetAmount() != tt.args.amount {
 				t.Errorf("RequestMint() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_verifyAmount(t *testing.T) {
+	type args struct {
+		amount uint64
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    uint64
+		wantErr bool
+	}{
+		{name: "verifyAmount", want: 123, args: args{amount: 123}},
+		{name: "verifyAmountMax", want: uint64(math.Pow(2, MaxOrder)), args: args{amount: uint64(math.Pow(2, MaxOrder))}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := verifyAmount(tt.args.amount)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("verifyAmount() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("verifyAmount() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

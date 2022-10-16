@@ -374,7 +374,7 @@ func verifySplitAmount(amount uint64) (uint64, error) {
 
 // verifyAmount make sure that amount is bigger than zero and smaller than 2^MaxOrder
 func verifyAmount(amount uint64) (uint64, error) {
-	if amount < 0 || amount > 2^MaxOrder {
+	if amount < 0 || amount > uint64(math.Pow(2, MaxOrder)) {
 		return 0, fmt.Errorf("invalid split amount: %d", amount)
 	}
 	return amount, nil
