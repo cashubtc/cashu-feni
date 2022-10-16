@@ -2,9 +2,9 @@ package cashu
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/lightning/lnbits"
+	cashuLog "github.com/gohumble/cashu-feni/log"
 	"time"
 )
 
@@ -14,10 +14,14 @@ type Proof struct {
 	Secret       string `json:"secret" gorm:"primaryKey"`
 	C            string `json:"C"`
 	reserved     bool
-	Script       *P2SHScript `gorm:"-" json:"script"`
+	Script       *P2SHScript `gorm:"-" json:"script" structs:"Script,omitempty"`
 	sendId       string
 	timeCreated  time.Time
 	timeReserved time.Time
+}
+
+func (p Proof) Log() map[string]interface{} {
+	return cashuLog.ToMap(p)
 }
 
 type P2SHScript struct {
@@ -36,6 +40,10 @@ type Promise struct {
 	B_b    string `json:"C_b" gorm:"primaryKey"`
 	C_c    string `json:"C_c"`
 	Amount uint64 `json:"amount"`
+}
+
+func (p Promise) Log() map[string]interface{} {
+	return cashuLog.ToMap(p)
 }
 
 type BlindedMessages []BlindedMessage
@@ -71,7 +79,7 @@ func NewErrorResponse(err error, options ...ErrorOptions) ErrorResponse {
 }
 
 func (e ErrorResponse) String() string {
-	return ToJson(e)
+	return cashuLog.ToJson(e)
 }
 
 func (e ErrorResponse) Error() string {
@@ -87,12 +95,4 @@ func CreateInvoice() lightning.Invoice {
 		return lnbits.NewInvoice()
 	}
 	return nil
-}
-
-func ToJson(i interface{}) string {
-	b, err := json.Marshal(i)
-	if err != nil {
-		return err.Error()
-	}
-	return string(b)
 }

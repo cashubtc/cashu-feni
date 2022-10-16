@@ -2,6 +2,7 @@ package lightning
 
 import (
 	"fmt"
+	cashuLog "github.com/gohumble/cashu-feni/log"
 )
 
 // If these interfaces are not implemented, library users of cashu MUST provide the lightning capabilities them self.
@@ -11,6 +12,7 @@ import (
 
 // Invoice should create a lightning invoice somewhere.
 type Invoice interface {
+	cashuLog.Loggable
 	fmt.Stringer      // toJson
 	SetHash(h string) // set the payment hash
 	GetHash() string  // get the payment hash
