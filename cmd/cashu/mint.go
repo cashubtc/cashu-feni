@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gohumble/cashu-feni/api"
+	"github.com/gohumble/cashu-feni/crypto"
 	_ "github.com/gohumble/cashu-feni/docs"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/ecslogrus"
@@ -14,6 +16,10 @@ import (
 // @description Ecash wallet and mint with Bitcoin Lightning support.
 // @contact.url https://8333.space:3338
 func main() {
+	ks := crypto.NewKeySet("TEST_PRIVATE_KEY", "0/0/0/0")
+	for _, i2 := range ks.PrivateKeys {
+		fmt.Printf("%d : %x\n", i2.Amount, i2.Key.Serialize())
+	}
 	initializeLogger()
 	log.Info("starting (feni) cashu mint server")
 	m := api.New()

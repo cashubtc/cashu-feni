@@ -226,7 +226,7 @@ func (m Mint) MintWithoutKeySet(messages cashu.BlindedMessages, pr string) ([]ca
 
 // generatePromise will generate promise and signature for given amount using public key
 func (m *Mint) generatePromise(amount int64, keySet *crypto.KeySet, B_ *secp256k1.PublicKey) (cashu.BlindedSignature, error) {
-	C_ := crypto.SecondStepBob(*B_, *m.keySets[keySet.Id].PrivateKeys.GetKeyByAmount(amount).Key)
+	C_ := crypto.SecondStepBob(*B_, *m.keySets[keySet.Id].PrivateKeys.GetKeyByAmount(uint64(amount)).Key)
 	err := m.database.StorePromise(cashu.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
 	if err != nil {
 		return cashu.BlindedSignature{}, err
@@ -252,7 +252,7 @@ func (m *Mint) verifyProof(proof cashu.Proof) error {
 	if !m.checkSpendable(proof) {
 		return fmt.Errorf("tokens already spent. Secret: %s", proof.Secret)
 	}
-	secretKey := m.keySets[m.KeySetId].PrivateKeys.GetKeyByAmount(proof.Amount).Key
+	secretKey := m.keySets[m.KeySetId].PrivateKeys.GetKeyByAmount(uint64(proof.Amount)).Key
 	pubKey, err := hex.DecodeString(proof.C)
 	if err != nil {
 		return err
@@ -431,7 +431,7 @@ func (m *Mint) invalidateProofs(proofs []cashu.Proof) error {
 func (m *Mint) GetPublicKeys() map[int64]string {
 	ret := make(map[int64]string, 0)
 	for _, key := range m.keySets[m.KeySetId].PublicKeys {
-		ret[key.Amount] = hex.EncodeToString(key.Key.SerializeCompressed())
+		ret[int64(key.Amount)] = hex.EncodeToString(key.Key.SerializeCompressed())
 	}
 	return ret
 }
