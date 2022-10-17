@@ -10,37 +10,6 @@ import (
 	"time"
 )
 
-func TestToJson(t *testing.T) {
-	type args struct {
-		i interface{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{name: "json", args: args{i: &struct {
-			Test    string `json:"test"`
-			Integer int    `json:"integer"`
-		}{Integer: 1, Test: "cashu"}}, want: `{"test":"cashu","integer":1}`},
-		{name: "annotate", args: args{i: &struct {
-			Test    string
-			Integer int
-		}{Integer: 1, Test: "cashu"}}, want: `{"Test":"cashu","Integer":1}`},
-		{name: "error", args: args{i: ErrorResponse{
-			Err:  "exception",
-			Code: 200,
-		}}, want: `{"error":"exception","code":200}`},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ToJson(tt.args.i); got != tt.want {
-				t.Errorf("ToJson() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestWithCode(t *testing.T) {
 	type args struct {
 		code int
@@ -202,6 +171,73 @@ func TestProof_Decode(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Decode() got = %v, want %v", string(got), tt.want)
+			}
+		})
+	}
+}
+
+func TestPromise_Log(t *testing.T) {
+	type fields struct {
+		B_b    string
+		C_c    string
+		Amount uint64
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   map[string]interface{}
+	}{
+		{name: "promiseLog", want: map[string]interface{}{"B_b": "1234a", "C_c": "1234", "Amount": uint64(1)}, fields: fields{Amount: 1, C_c: "1234", B_b: "1234a"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := Promise{
+				B_b:    tt.fields.B_b,
+				C_c:    tt.fields.C_c,
+				Amount: tt.fields.Amount,
+			}
+			if got := p.Log(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Log() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProof_Log(t *testing.T) {
+	type fields struct {
+		Id           string
+		Amount       uint64
+		Secret       string
+		C            string
+		reserved     bool
+		Script       *P2SHScript
+		sendId       string
+		timeCreated  time.Time
+		timeReserved time.Time
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   map[string]interface{}
+	}{
+		{name: "proofLog", want: map[string]interface{}{"Id": "1234a", "Secret": "1", "C": "1234", "Amount": uint64(1)},
+			fields: fields{Amount: 1, C: "1234", Id: "1234a", Secret: "1", Script: nil}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := Proof{
+				Id:           tt.fields.Id,
+				Amount:       tt.fields.Amount,
+				Secret:       tt.fields.Secret,
+				C:            tt.fields.C,
+				reserved:     tt.fields.reserved,
+				Script:       tt.fields.Script,
+				sendId:       tt.fields.sendId,
+				timeCreated:  tt.fields.timeCreated,
+				timeReserved: tt.fields.timeReserved,
+			}
+			if got := p.Log(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Log() = %v, want %v", got, tt.want)
 			}
 		})
 	}

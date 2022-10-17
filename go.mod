@@ -7,6 +7,7 @@ require (
 	github.com/btcsuite/btcd/btcutil v1.1.1
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0
+	github.com/fatih/structs v1.1.0
 	github.com/gorilla/mux v1.8.0
 	github.com/imroc/req v0.3.2
 	github.com/jinzhu/configor v1.2.1

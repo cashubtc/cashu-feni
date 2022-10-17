@@ -5,6 +5,8 @@ import (
 	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/gohumble/cashu-feni/crypto"
 	"github.com/gohumble/cashu-feni/lightning"
+	cashuLog "github.com/gohumble/cashu-feni/log"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"os"
@@ -80,16 +82,19 @@ func (s SqlDatabase) GetUsedProofs() []cashu.Proof {
 
 // invalidateProof will write proof to db
 func (s SqlDatabase) InvalidateProof(p cashu.Proof) error {
+	log.WithFields(p.Log()).Info("invalidating proof")
 	return s.db.Create(&p).Error
 }
 
 // storePromise will write promise to db
 func (s SqlDatabase) StorePromise(p cashu.Promise) error {
+	log.WithFields(p.Log()).Info("storing promise")
 	return s.db.Create(&p).Error
 }
 
 // storeLightningInvoice will store lightning invoice in db
 func (s SqlDatabase) StoreLightningInvoice(i lightning.Invoice) error {
+	log.WithFields(i.Log()).Info("storing lightning invoice")
 	return s.db.Create(i).Error
 }
 
@@ -98,6 +103,7 @@ func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoice, error)
 	invoice := cashu.CreateInvoice()
 	invoice.SetHash(hash)
 	tx := s.db.Find(invoice)
+	log.WithFields(cashuLog.WithLoggable(invoice, tx.Error)).Info("storing lightning invoice")
 	return invoice, tx.Error
 }
 

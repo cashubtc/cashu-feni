@@ -2,6 +2,7 @@ package lnbits
 
 import (
 	"encoding/json"
+	cashuLog "github.com/gohumble/cashu-feni/log"
 	"github.com/imroc/req"
 )
 
@@ -77,6 +78,10 @@ type Invoice struct {
 	Pr     string `json:"payment_request"`
 	Hash   string `json:"payment_hash" gorm:"primaryKey"`
 	Issued bool   `json:"issued"`
+}
+
+func (i Invoice) Log() map[string]interface{} {
+	return cashuLog.ToMap(i)
 }
 
 func (i Invoice) String() string {
