@@ -9,7 +9,7 @@ import (
 	"io"
 )
 
-func InitializeLogger(logLevel string) {
+func Configure(logLevel string) {
 	level, err := log.ParseLevel(logLevel)
 	if err != nil {
 		level = log.TraceLevel

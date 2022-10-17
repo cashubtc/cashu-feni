@@ -12,7 +12,7 @@ import (
 // @description Ecash wallet and mint with Bitcoin Lightning support.
 // @contact.url https://8333.space:3338
 func main() {
-	cashuLog.InitializeLogger(api.Config.LogLevel)
+	cashuLog.Configure(api.Config.LogLevel)
 	log.Info("starting (feni) cashu mint server")
 	m := api.New()
 	m.StartServer()

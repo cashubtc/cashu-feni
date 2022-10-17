@@ -131,3 +131,24 @@ func TestToMap(t *testing.T) {
 		})
 	}
 }
+
+func TestConfigure(t *testing.T) {
+	type args struct {
+		logLevel string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{name: "hookTest", args: args{logLevel: "trace"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			preConfigureHooks := len(logrus.StandardLogger().Hooks)
+			Configure(tt.args.logLevel)
+			if len(logrus.StandardLogger().Hooks) == preConfigureHooks {
+				t.Errorf("invalid log hook configuration")
+			}
+		})
+	}
+}
