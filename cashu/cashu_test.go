@@ -158,7 +158,7 @@ func TestProof_Decode(t *testing.T) {
 				Amount:       tt.fields.Amount,
 				Secret:       tt.fields.Secret,
 				C:            tt.fields.C,
-				reserved:     tt.fields.reserved,
+				Reserved:     tt.fields.reserved,
 				Script:       tt.fields.Script,
 				sendId:       tt.fields.sendId,
 				timeCreated:  tt.fields.timeCreated,
@@ -220,7 +220,7 @@ func TestProof_Log(t *testing.T) {
 		fields fields
 		want   map[string]interface{}
 	}{
-		{name: "proofLog", want: map[string]interface{}{"Id": "1234a", "Secret": "1", "C": "1234", "Amount": uint64(1)},
+		{name: "proofLog", want: map[string]interface{}{"Id": "1234a", "Secret": "1", "Reserved": false, "C": "1234", "Amount": uint64(1)},
 			fields: fields{Amount: 1, C: "1234", Id: "1234a", Secret: "1", Script: nil}},
 	}
 	for _, tt := range tests {
@@ -230,7 +230,7 @@ func TestProof_Log(t *testing.T) {
 				Amount:       tt.fields.Amount,
 				Secret:       tt.fields.Secret,
 				C:            tt.fields.C,
-				reserved:     tt.fields.reserved,
+				Reserved:     tt.fields.reserved,
 				Script:       tt.fields.Script,
 				sendId:       tt.fields.sendId,
 				timeCreated:  tt.fields.timeCreated,

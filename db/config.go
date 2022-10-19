@@ -32,7 +32,7 @@ const name = "config.yaml"
 
 func init() {
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
-		Config.Database.Sqlite = &SqliteConfig{Path: "data"}
+		Config.Database.Sqlite = &SqliteConfig{Path: "data", FileName: "database.sqlite"}
 		cfg, err := json.Marshal(Config)
 		if err != nil {
 			panic(err)
