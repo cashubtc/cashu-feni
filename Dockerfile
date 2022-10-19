@@ -9,7 +9,7 @@ RUN apk --no-cache add git alpine-sdk build-base gcc
 WORKDIR /build
 
 
-RUN go build -o cashu-feni cmd/cashu/mint.go
+RUN go build -o cashu-feni cmd/mint/mint.go
 
 FROM alpine:latest
 

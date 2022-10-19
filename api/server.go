@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/gohumble/cashu-feni/crypto"
 	"github.com/gohumble/cashu-feni/db"
 	"github.com/gohumble/cashu-feni/mint"
 	"github.com/gorilla/mux"
@@ -24,6 +25,22 @@ func New() *Api {
 	// currently using sql storage only.
 	// this should be extensible for future versions.
 	sqlStorage := db.NewSqlDatabase()
+	err := sqlStorage.Migrate(cashu.Proof{})
+	if err != nil {
+		panic(err)
+	}
+	err = sqlStorage.Migrate(cashu.Promise{})
+	if err != nil {
+		panic(err)
+	}
+	err = sqlStorage.Migrate(crypto.KeySet{})
+	if err != nil {
+		panic(err)
+	}
+	err = sqlStorage.Migrate(cashu.CreateInvoice())
+	if err != nil {
+		panic(err)
+	}
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("%s:%s", Config.Mint.Host, Config.Mint.Port),
 		WriteTimeout: 90 * time.Second,

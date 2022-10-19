@@ -3,7 +3,6 @@ package db
 import (
 	"errors"
 	"github.com/gohumble/cashu-feni/cashu"
-	"github.com/gohumble/cashu-feni/crypto"
 	"github.com/gohumble/cashu-feni/lightning"
 	cashuLog "github.com/gohumble/cashu-feni/log"
 	log "github.com/sirupsen/logrus"
@@ -33,13 +32,11 @@ func createSqliteDatabase() MintStorage {
 		}
 	}
 
-	db := SqlDatabase{db: open(sqlite.Open(path.Join(filePath, "database.db")))}
-	err := db.Migrate(cashu.Proof{}, cashu.Promise{}, crypto.KeySet{}, cashu.CreateInvoice())
-	if err != nil {
-		panic(err)
-	}
+	db := SqlDatabase{db: open(sqlite.Open(path.Join(filePath, Config.Database.Sqlite.FileName)))}
+
 	return db
 }
+
 func open(dialector gorm.Dialector) *gorm.DB {
 	orm, err := gorm.Open(dialector,
 		&gorm.Config{DisableForeignKeyConstraintWhenMigrating: true, FullSaveAssociations: true})
@@ -50,55 +47,53 @@ func open(dialector gorm.Dialector) *gorm.DB {
 	return orm
 }
 
-func (s SqlDatabase) Migrate(proof cashu.Proof, promise cashu.Promise, keySet crypto.KeySet, invoice lightning.Invoice) error {
+func (s SqlDatabase) Migrate(object interface{}) error {
 	// do not migrate invoice, if lightning is not enabled
-	if invoice != nil {
-		err := s.db.AutoMigrate(invoice)
+	if object != nil {
+		err := s.db.AutoMigrate(object)
 		if err != nil {
 			panic(err)
 		}
 	}
-	err := s.db.AutoMigrate(proof)
-	if err != nil {
-		panic(err)
-	}
-	err = s.db.AutoMigrate(promise)
-	if err != nil {
-		panic(err)
-	}
-	err = s.db.AutoMigrate(keySet)
-	if err != nil {
-		panic(err)
-	}
 	return nil
 }
+func (s SqlDatabase) ProofsUsed(in []string) []cashu.Proof {
+	proofs := make([]cashu.Proof, 0)
+	s.db.Where(in).Find(&proofs)
+	return proofs
+}
 
-// getUsedProofs reads all proofs from db
+// GetUsedProofs reads all proofs from db
 func (s SqlDatabase) GetUsedProofs() []cashu.Proof {
 	proofs := make([]cashu.Proof, 0)
 	s.db.Find(&proofs)
 	return proofs
 }
 
-// invalidateProof will write proof to db
-func (s SqlDatabase) InvalidateProof(p cashu.Proof) error {
+// InvalidateProof will write proof to db
+func (s SqlDatabase) StoreProof(p cashu.Proof) error {
 	log.WithFields(p.Log()).Info("invalidating proof")
 	return s.db.Create(&p).Error
 }
 
-// storePromise will write promise to db
+func (s SqlDatabase) StoreScript(p cashu.P2SHScript) error {
+	log.Info("storing script")
+	return s.db.Create(&p).Error
+}
+
+// StorePromise will write promise to db
 func (s SqlDatabase) StorePromise(p cashu.Promise) error {
 	log.WithFields(p.Log()).Info("storing promise")
 	return s.db.Create(&p).Error
 }
 
-// storeLightningInvoice will store lightning invoice in db
+// StoreLightningInvoice will store lightning invoice in db
 func (s SqlDatabase) StoreLightningInvoice(i lightning.Invoice) error {
 	log.WithFields(i.Log()).Info("storing lightning invoice")
 	return s.db.Create(i).Error
 }
 
-// getLightningInvoice reads lighting invoice from db
+// GetLightningInvoice reads lighting invoice from db
 func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoice, error) {
 	invoice := cashu.CreateInvoice()
 	invoice.SetHash(hash)
@@ -107,7 +102,7 @@ func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoice, error)
 	return invoice, tx.Error
 }
 
-// updateLightningInvoice updates lightning invoice in db
+// UpdateLightningInvoice updates lightning invoice in db
 func (s SqlDatabase) UpdateLightningInvoice(hash string, issued bool) error {
 	i, err := s.GetLightningInvoice(hash)
 	if err != nil {

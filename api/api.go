@@ -12,7 +12,7 @@ type Api struct {
 	Mint       *mint.Mint
 }
 
-type MintResponse cashu.BlindedMessages
+type MintResponse []cashu.BlindedSignature
 type MintRequest struct {
 	BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
 }

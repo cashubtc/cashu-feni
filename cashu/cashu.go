@@ -8,12 +8,18 @@ import (
 	"time"
 )
 
+type ProofsUsed struct {
+	Amount   uint64 `json:"amount"`
+	Secret   string `json:"secret" gorm:"primaryKey"`
+	C        string `json:"C"`
+	TimeUsed time.Time
+}
 type Proof struct {
 	Id           string `json:"id"`
 	Amount       uint64 `json:"amount"`
 	Secret       string `json:"secret" gorm:"primaryKey"`
 	C            string `json:"C"`
-	reserved     bool
+	Reserved     bool
 	Script       *P2SHScript `gorm:"-" json:"script" structs:"Script,omitempty"`
 	sendId       string
 	timeCreated  time.Time

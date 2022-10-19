@@ -182,6 +182,7 @@ func (m *Mint) payLightningInvoice(pr string, feeLimitMSat uint64) (lightning.Pa
 	}
 	return m.client.InvoiceStatus(invoice.GetHash())
 }
+
 func (m Mint) mint(messages cashu.BlindedMessages, pr string, keySet *crypto.KeySet) ([]cashu.BlindedSignature, error) {
 	publicKeys := make([]*secp256k1.PublicKey, 0)
 	var amounts []uint64
@@ -215,6 +216,7 @@ func (m Mint) mint(messages cashu.BlindedMessages, pr string, keySet *crypto.Key
 	}
 	return promises, nil
 }
+
 func (m Mint) Mint(messages cashu.BlindedMessages, pr string, keySet *crypto.KeySet) ([]cashu.BlindedSignature, error) {
 	// mint generates promises for keys. checks lightning invoice before creating promise.
 	return m.mint(messages, pr, keySet)
@@ -292,8 +294,8 @@ func verifyScript(proof cashu.Proof) (addr *btcutil.AddressScriptHash, err error
 // verifyOutputs verify output data
 func verifyOutputs(total, amount uint64, outputs []cashu.BlindedMessage) (bool, error) {
 	fstAmt, sndAmt := total-amount, amount
-	fstOutputs := amountSplit(fstAmt)
-	sndOutputs := amountSplit(sndAmt)
+	fstOutputs := AmountSplit(fstAmt)
+	sndOutputs := AmountSplit(sndAmt)
 	expected := append(fstOutputs, sndOutputs...)
 	given := make([]uint64, 0)
 	for _, o := range outputs {
@@ -346,8 +348,8 @@ func (m *Mint) checkSpendable(proof cashu.Proof) bool {
 	return !found
 }
 
-// amountSplit will convert amount into binary and return array with decimal binary values
-func amountSplit(amount uint64) []uint64 {
+// AmountSplit will convert amount into binary and return array with decimal binary values
+func AmountSplit(amount uint64) []uint64 {
 	bin := reverse(strconv.FormatUint(amount, 2))
 	rv := make([]uint64, 0)
 	for i, b := range []byte(bin) {
@@ -419,7 +421,7 @@ func (m *Mint) invalidateProofs(proofs []cashu.Proof) error {
 	m.proofsUsed = lo.Uniq[string](m.proofsUsed)
 	// invalidate all proofs
 	for _, proof := range proofs {
-		err := m.database.InvalidateProof(proof)
+		err := m.database.StoreProof(proof)
 		if err != nil {
 			return err
 		}
@@ -431,7 +433,7 @@ func (m *Mint) invalidateProofs(proofs []cashu.Proof) error {
 func (m *Mint) GetPublicKeys() map[uint64]string {
 	ret := make(map[uint64]string, 0)
 	for _, key := range m.keySets[m.KeySetId].PublicKeys {
-		ret[uint64(key.Amount)] = hex.EncodeToString(key.Key.SerializeCompressed())
+		ret[key.Amount] = hex.EncodeToString(key.Key.SerializeCompressed())
 	}
 	return ret
 }
@@ -541,8 +543,8 @@ func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.Blinde
 		return nil, nil, err
 	}
 	// create first outputs and second outputs
-	outsFts := amountSplit(total - amount)
-	outsSnd := amountSplit(amount)
+	outsFts := AmountSplit(total - amount)
+	outsSnd := AmountSplit(amount)
 	B_fst := make([]*secp256k1.PublicKey, 0)
 	B_snd := make([]*secp256k1.PublicKey, 0)
 	for _, data := range outputs[:len(outsFts)] {

@@ -17,7 +17,8 @@ type Configuration struct {
 }
 
 type SqliteConfig struct {
-	Path string `json:"path" yaml:"path"`
+	Path     string `json:"path" yaml:"path"`
+	FileName string `json:"filename" yaml:"filename"`
 }
 
 type MySqlConfig struct {
