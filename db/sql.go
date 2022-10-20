@@ -76,6 +76,11 @@ func (s SqlDatabase) StoreProof(p cashu.Proof) error {
 	return s.db.Create(&p).Error
 }
 
+func (s SqlDatabase) GetScripts() ([]cashu.P2SHScript, error) {
+	scripts := make([]cashu.P2SHScript, 0)
+	tx := s.db.Find(&scripts)
+	return scripts, tx.Error
+}
 func (s SqlDatabase) StoreScript(p cashu.P2SHScript) error {
 	log.Info("storing script")
 	return s.db.Create(&p).Error

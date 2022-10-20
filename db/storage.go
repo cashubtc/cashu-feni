@@ -11,6 +11,7 @@ type MintStorage interface {
 	StoreProof(proof cashu.Proof) error
 	StorePromise(p cashu.Promise) error
 	StoreScript(p cashu.P2SHScript) error
+	GetScripts() ([]cashu.P2SHScript, error)
 	StoreLightningInvoice(i lightning.Invoice) error
 	GetLightningInvoice(hash string) (lightning.Invoice, error)
 	UpdateLightningInvoice(hash string, issued bool) error
