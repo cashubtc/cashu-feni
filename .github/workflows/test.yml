@@ -21,9 +21,9 @@ jobs:
         with:
           verbose: true # optional (default = false)
       - name: Build
-        run: go build -v -o cashu-feni cmd/cashu/mint/mint.go
+        run: go build -v -o cashu-feni cmd/mint/mint.go
       - name: Run Cashu Feni
-        run: nohup go run cmd/cashu/mint/mint.go &
+        run: nohup go run cmd/mint/mint.go &
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
