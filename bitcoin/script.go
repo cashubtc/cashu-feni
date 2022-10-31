@@ -1,6 +1,7 @@
 package bitcoin
 
 import (
+	"fmt"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -17,7 +18,7 @@ const (
 )
 
 func Step0CarolPrivateKey() *secp256k1.PrivateKey {
-	key, err := secp256k1.GeneratePrivateKey()
+	key, err := btcec.NewPrivateKey()
 	if err != nil {
 		return nil
 	}
@@ -90,6 +91,7 @@ func Step3BobVerifyScript(txInSignature, txInRedeemScript []byte, tx *wire.MsgTx
 	if err != nil {
 		return err
 	}
+	fmt.Println(txInRedeemScript)
 	// set the received signature script
 	tx.TxIn[0].SignatureScript = txInSignature
 	if txscript.IsPayToScriptHash(txInScriptPubKey) {

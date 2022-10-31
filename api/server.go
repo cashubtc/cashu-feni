@@ -370,17 +370,13 @@ func (api Api) split(w http.ResponseWriter, r *http.Request) {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	fstb, err := json.Marshal(fstPromise)
+	response := SplitResponse{Fst: fstPromise, Snd: sendPromise}
+	res, err := json.Marshal(response)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	sstb, err := json.Marshal(sendPromise)
-	if err != nil {
-		responseError(w, cashu.NewErrorResponse(err))
-		return
-	}
-	_, err = fmt.Fprintf(w, fmt.Sprintf(`{"fst": %s, "snd": %s}`, string(fstb), string(sstb)))
+	_, err = fmt.Fprintf(w, string(res))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return

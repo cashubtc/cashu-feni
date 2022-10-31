@@ -66,6 +66,20 @@ func mintCmd(cmd *cobra.Command, args []string) {
 	}
 }
 
+func invalidate(proof cashu.Proof) error {
+	err := storage.DeleteProof(proof)
+	if err != nil {
+		return err
+	}
+	return storage.StoreUsedProofs(
+		cashu.ProofsUsed{
+			Secret:   proof.Secret,
+			Amount:   proof.Amount,
+			C:        proof.C,
+			TimeUsed: time.Now(),
+		},
+	)
+}
 func storeProofs(proofs []cashu.Proof) error {
 	for _, proof := range proofs {
 		Wallet.proofs = append(Wallet.proofs, proof)

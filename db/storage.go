@@ -9,9 +9,11 @@ type MintStorage interface {
 	GetUsedProofs() []cashu.Proof
 	ProofsUsed([]string) []cashu.Proof
 	StoreProof(proof cashu.Proof) error
+	DeleteProof(proof cashu.Proof) error
+	StoreUsedProofs(proof cashu.ProofsUsed) error
 	StorePromise(p cashu.Promise) error
 	StoreScript(p cashu.P2SHScript) error
-	GetScripts() ([]cashu.P2SHScript, error)
+	GetScripts(address string) ([]cashu.P2SHScript, error)
 	StoreLightningInvoice(i lightning.Invoice) error
 	GetLightningInvoice(hash string) (lightning.Invoice, error)
 	UpdateLightningInvoice(hash string, issued bool) error

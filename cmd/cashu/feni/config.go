@@ -37,7 +37,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
+	// initialize the default wallet (no other option selected using -w)
+	InitializeDatabase(Config.Wallet)
 }
 
 func InitializeDatabase(wallet string) {

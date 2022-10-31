@@ -6,6 +6,7 @@ import (
 	"github.com/gohumble/cashu-feni/bitcoin"
 	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 func init() {
@@ -21,6 +22,13 @@ var lockCommand = &cobra.Command{
 	Run:    lock,
 }
 
+func isPay2ScriptHash(s string) bool {
+	return len(strings.Split(s, "P2SH:")) == 2
+}
+func flagIsPay2ScriptHash() bool {
+	return isPay2ScriptHash(lockFlag)
+}
+
 func lock(cmd *cobra.Command, args []string) {
 	fmt.Println(createP2SHLock())
 }
@@ -28,6 +36,7 @@ func lock(cmd *cobra.Command, args []string) {
 func createP2SHLock() *cashu.P2SHScript {
 	key := bitcoin.Step0CarolPrivateKey()
 	txInRedeemScript := bitcoin.Step0CarolCheckSigRedeemScript(*key.PubKey())
+	fmt.Println(txInRedeemScript)
 	txInP2SHAdress, err := bitcoin.Step1CarolCreateP2SHAddress(txInRedeemScript)
 	if err != nil {
 		return nil
@@ -36,8 +45,8 @@ func createP2SHLock() *cashu.P2SHScript {
 	if err != nil {
 		return nil
 	}
-	txInRedeemScriptB64 := base64.RawURLEncoding.EncodeToString(txInRedeemScript)
-	txInSignatureB64 := base64.RawURLEncoding.EncodeToString(txInSignature.SignatureScript)
+	txInRedeemScriptB64 := base64.URLEncoding.EncodeToString(txInRedeemScript)
+	txInSignatureB64 := base64.URLEncoding.EncodeToString(txInSignature.SignatureScript)
 	p2SHScript := cashu.P2SHScript{Script: txInRedeemScriptB64, Signature: txInSignatureB64, Address: txInP2SHAdress.EncodeAddress()}
 	err = storage.StoreScript(p2SHScript)
 	if err != nil {

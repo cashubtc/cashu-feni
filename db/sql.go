@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"os"
 	"path"
 )
@@ -57,6 +58,13 @@ func (s SqlDatabase) Migrate(object interface{}) error {
 	}
 	return nil
 }
+func (s SqlDatabase) StoreUsedProofs(proof cashu.ProofsUsed) error {
+	return s.db.Create(proof).Error
+}
+func (s SqlDatabase) DeleteProof(proof cashu.Proof) error {
+
+	return s.db.Delete(proof).Error
+}
 func (s SqlDatabase) ProofsUsed(in []string) []cashu.Proof {
 	proofs := make([]cashu.Proof, 0)
 	s.db.Where(in).Find(&proofs)
@@ -73,12 +81,19 @@ func (s SqlDatabase) GetUsedProofs() []cashu.Proof {
 // InvalidateProof will write proof to db
 func (s SqlDatabase) StoreProof(p cashu.Proof) error {
 	log.WithFields(p.Log()).Info("invalidating proof")
-	return s.db.Create(&p).Error
+	return s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "secret"}}, // key colume
+		DoUpdates: clause.AssignmentColumns([]string{"reserved", "send_id"}),
+	}).Create(&p).Error
 }
 
-func (s SqlDatabase) GetScripts() ([]cashu.P2SHScript, error) {
+func (s SqlDatabase) GetScripts(address string) ([]cashu.P2SHScript, error) {
 	scripts := make([]cashu.P2SHScript, 0)
-	tx := s.db.Find(&scripts)
+	var tx = s.db
+	if address != "" {
+		tx = tx.Where("address = ?", address)
+	}
+	tx = tx.Find(&scripts)
 	return scripts, tx.Error
 }
 func (s SqlDatabase) StoreScript(p cashu.P2SHScript) error {

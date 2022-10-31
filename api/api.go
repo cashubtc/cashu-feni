@@ -23,8 +23,8 @@ type MeltResponse struct {
 type GetKeysResponse map[int]string
 type CheckResponse map[string]bool
 type SplitResponse struct {
-	Fst string
-	Snd string
+	Fst []cashu.BlindedSignature `json:"fst"`
+	Snd []cashu.BlindedSignature `json:"snd"`
 }
 type GetKeySetsResponse struct {
 	KeySets []string `json:"keysets"`

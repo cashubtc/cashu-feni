@@ -15,13 +15,13 @@ func init() {
 const getLocksAnnotationValue = "GetLocks"
 
 var GetLocksDynamic = func(annotationValue string) []prompt.Suggest {
-	scripts, err := storage.GetScripts()
+	scripts, err := storage.GetScripts("")
 	if err != nil {
 		return nil
 	}
 	suggestions := make([]prompt.Suggest, 0)
 	for _, script := range scripts {
-		suggestions = append(suggestions, prompt.Suggest{Text: script.Script, Description: fmt.Sprintf("Your P2SH lock for receiving and sending cashu coins")})
+		suggestions = append(suggestions, prompt.Suggest{Text: fmt.Sprintf("P2SH:%s", script.Address), Description: fmt.Sprintf("Your P2SH lock for receiving and sending cashu coins")})
 
 	}
 	return suggestions
@@ -42,7 +42,7 @@ func locks(cmd *cobra.Command, args []string) {
 }
 
 func getP2SHLocks() []cashu.P2SHScript {
-	scripts, err := storage.GetScripts()
+	scripts, err := storage.GetScripts("")
 	if err != nil {
 		return nil
 	}

@@ -5,6 +5,7 @@ import (
 	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/lightning/lnbits"
 	cashuLog "github.com/gohumble/cashu-feni/log"
+	"github.com/google/uuid"
 	"time"
 )
 
@@ -21,9 +22,9 @@ type Proof struct {
 	C            string `json:"C"`
 	Reserved     bool
 	Script       *P2SHScript `gorm:"-" json:"script" structs:"Script,omitempty"`
-	sendId       string
-	timeCreated  time.Time
-	timeReserved time.Time
+	SendId       uuid.UUID
+	TimeCreated  time.Time
+	TimeReserved time.Time
 }
 
 func (p Proof) Log() map[string]interface{} {

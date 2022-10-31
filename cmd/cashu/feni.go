@@ -26,7 +26,7 @@ var advancedPrompt = &feni.CobraPrompt{
 			if suggestions := feni.GetWalletsDynamic(annotationValue); suggestions != nil {
 				return suggestions
 			}
-		} else if document.Text == "locks " {
+		} else if document.Text == "locks " || document.Text == "-l " {
 			if suggestions := feni.GetLocksDynamic(annotationValue); suggestions != nil {
 				return suggestions
 			}
