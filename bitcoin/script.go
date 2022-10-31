@@ -82,7 +82,11 @@ func Step2CarolSignTx(txInRedeemScript []byte, privateKey *btcec.PrivateKey) (*w
 	if err != nil {
 		return nil, err
 	}
-	tx.TxIn[0].SignatureScript = sig
+	signatureScript, err := txscript.NewScriptBuilder().AddData(sig).AddData(txInRedeemScript).Script()
+	if err != nil {
+		return nil, err
+	}
+	tx.TxIn[0].SignatureScript = signatureScript
 	return tx.TxIn[0], nil
 
 }
