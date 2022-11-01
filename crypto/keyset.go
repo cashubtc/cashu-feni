@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const MaxOrder = 64
+const MaxOrder = 63
 
 type KeySet struct {
 	Id             string
