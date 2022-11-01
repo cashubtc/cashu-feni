@@ -21,6 +21,17 @@ type WalletConfig struct {
 	Wallet         string `env:"WALLET"`
 }
 
+func defaultConfig() {
+	log.Infof("Loading default configuration")
+	Config = WalletConfig{
+		Debug:          true,
+		Lightning:      false,
+		MintServerHost: "localhost",
+		MintServerPort: "3338",
+		Wallet:         "wallet",
+	}
+
+}
 func init() {
 	WalletClient = &Client{
 		url: "http://0.0.0.0:3338",
@@ -31,11 +42,13 @@ func init() {
 	}
 	err = godotenv.Load(path.Join(dirname, ".cashu", ".env"))
 	if err != nil {
-		panic(err)
+		defaultConfig()
+		return
 	}
 	err = env.Parse(&Config)
 	if err != nil {
-		panic(err)
+		defaultConfig()
+		return
 	}
 	// initialize the default wallet (no other option selected using -w)
 	InitializeDatabase(Config.Wallet)
