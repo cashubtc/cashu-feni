@@ -48,14 +48,14 @@ func send(cmd *cobra.Command, args []string) {
 	if lockFlag != "" && !p2sh {
 		hide = true
 	}
-	coin, err := serialize_proofs(sendProofs, hide)
+	coin, err := serializeProofs(sendProofs, hide)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(coin)
 }
 
-func serialize_proofs(proofs []cashu.Proof, hideSecrets bool) (string, error) {
+func serializeProofs(proofs []cashu.Proof, hideSecrets bool) (string, error) {
 	if hideSecrets {
 		for i := range proofs {
 			proofs[i].Secret = ""
