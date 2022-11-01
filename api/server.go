@@ -172,7 +172,7 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Errorf("error checking amount")
 	}
-	invoice, err := api.Mint.RequestMint(int64(ai))
+	invoice, err := api.Mint.RequestMint(uint64(ai))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return

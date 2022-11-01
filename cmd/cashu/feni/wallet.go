@@ -34,8 +34,8 @@ func Zip[T, U any](ts []T, us []U) []Pair[T, U] {
 }
 
 type MintWallet struct {
-	keys   map[int64]*secp256k1.PublicKey // current public keys from mint server
-	keySet string                         // current keySet id from mint server.
+	keys   map[uint64]*secp256k1.PublicKey // current public keys from mint server
+	keySet string                          // current keySet id from mint server.
 	proofs []cashu.Proof
 }
 
@@ -45,7 +45,7 @@ func init() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	Wallet = MintWallet{proofs: make([]cashu.Proof, 0), keys: make(map[int64]*secp256k1.PublicKey)}
+	Wallet = MintWallet{proofs: make([]cashu.Proof, 0), keys: make(map[uint64]*secp256k1.PublicKey)}
 	mintServerPublickeys, err := WalletClient.Keys()
 	if err != nil {
 		panic(err)
@@ -58,10 +58,10 @@ func init() {
 	Wallet.keySet = keySet.KeySets[len(keySet.KeySets)-1]
 }
 
-func constructOutputs(amounts []int64, secrets []string) (api.MintRequest, []*secp256k1.PrivateKey) {
+func constructOutputs(amounts []uint64, secrets []string) (api.MintRequest, []*secp256k1.PrivateKey) {
 	payloads := api.MintRequest{BlindedMessages: make(cashu.BlindedMessages, 0)}
 	privateKeys := make([]*secp256k1.PrivateKey, 0)
-	for _, pair := range Zip[string, int64](secrets, amounts) {
+	for _, pair := range Zip[string, uint64](secrets, amounts) {
 		r, err := secp256k1.GeneratePrivateKey()
 		if err != nil {
 			panic(err)
@@ -74,7 +74,7 @@ func constructOutputs(amounts []int64, secrets []string) (api.MintRequest, []*se
 	return payloads, privateKeys
 }
 
-func (w MintWallet) checkUsedSecrets(amounts []int64, secrets []string) error {
+func (w MintWallet) checkUsedSecrets(amounts []uint64, secrets []string) error {
 	proofs := storage.ProofsUsed(secrets)
 	if len(proofs) > 0 {
 		return fmt.Errorf("proofs already used")
@@ -82,7 +82,7 @@ func (w MintWallet) checkUsedSecrets(amounts []int64, secrets []string) error {
 	return nil
 }
 
-func (w MintWallet) mint(amounts []int64, paymentHash string) []cashu.Proof {
+func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 	secrets := make([]string, 0)
 	for range amounts {
 		secrets = append(secrets, generateSecret())
@@ -122,8 +122,8 @@ func (w MintWallet) constructProofs(promises []cashu.BlindedSignature, secrets [
 }
 
 type KeySetBalance struct {
-	Balance   int64
-	Available int64
+	Balance   uint64
+	Available uint64
 }
 type Balance map[string]KeySetBalance
 
@@ -194,7 +194,7 @@ func (w MintWallet) GetSpendableProofs() []cashu.Proof {
 	return spendable
 }
 
-func (w MintWallet) SplitToSend(amount int64, scndSecret string, setReserved bool) (keep []cashu.Proof, send []cashu.Proof, err error) {
+func (w MintWallet) SplitToSend(amount uint64, scndSecret string, setReserved bool) (keep []cashu.Proof, send []cashu.Proof, err error) {
 	spendableProofs := w.GetSpendableProofs()
 	if SumProofs(spendableProofs) < amount {
 		return nil, nil, fmt.Errorf("balance to low.")
@@ -233,7 +233,7 @@ func (w MintWallet) redeem(proofs []cashu.Proof, scndScript, scndSignature strin
 	}
 	return w.Split(proofs, SumProofs(proofs), "")
 }
-func (w *MintWallet) Split(proofs []cashu.Proof, amount int64, scndSecret string) (keep []cashu.Proof, send []cashu.Proof, err error) {
+func (w *MintWallet) Split(proofs []cashu.Proof, amount uint64, scndSecret string) (keep []cashu.Proof, send []cashu.Proof, err error) {
 	if len(proofs) < 0 {
 		return nil, nil, fmt.Errorf("no proofs provided.")
 	}
@@ -268,7 +268,7 @@ func (w *MintWallet) Split(proofs []cashu.Proof, amount int64, scndSecret string
 	}
 	return frstProofs, scndProofs, nil
 }
-func (w MintWallet) split(proofs []cashu.Proof, amount int64, scndSecret string) (keep []cashu.Proof, send []cashu.Proof, err error) {
+func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string) (keep []cashu.Proof, send []cashu.Proof, err error) {
 
 	total := SumProofs(proofs)
 	frstAmt := total - amount
@@ -305,8 +305,8 @@ func (w MintWallet) split(proofs []cashu.Proof, amount int64, scndSecret string)
 		w.constructProofs(response.Snd, secrets[len(response.Fst):], rs[len(response.Fst):]), nil
 }
 
-func SumProofs(p []cashu.Proof) int64 {
-	var sum int64
+func SumProofs(p []cashu.Proof) uint64 {
+	var sum uint64
 	for _, proof := range p {
 		sum += proof.Amount
 	}

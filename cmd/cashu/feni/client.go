@@ -32,7 +32,7 @@ func checkError(resp *req.Resp) error {
 	}
 	return nil
 }
-func (c Client) Keys() (map[int64]*secp256k1.PublicKey, error) {
+func (c Client) Keys() (map[uint64]*secp256k1.PublicKey, error) {
 	resp, err := req.Get(fmt.Sprintf("%s/keys", c.url))
 	if err != nil {
 		return nil, err
@@ -40,8 +40,8 @@ func (c Client) Keys() (map[int64]*secp256k1.PublicKey, error) {
 	if err = checkError(resp); err != nil {
 		return nil, err
 	}
-	response := make(map[int64]string)
-	keys := make(map[int64]*secp256k1.PublicKey)
+	response := make(map[uint64]string)
+	keys := make(map[uint64]*secp256k1.PublicKey)
 	err = resp.ToJSON(&response)
 	for u, s := range response {
 		h, err := hex.DecodeString(s)

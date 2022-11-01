@@ -29,7 +29,7 @@ func mintCmd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	splitAmount := mint.AmountSplit(int64(amount))
+	splitAmount := mint.AmountSplit(uint64(amount))
 	if amount > 0 {
 		if !Config.Lightning {
 			if err := storeProofs(Wallet.mint(splitAmount, hash)); err != nil {

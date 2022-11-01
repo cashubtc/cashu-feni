@@ -10,14 +10,14 @@ import (
 )
 
 type ProofsUsed struct {
-	Amount   int64  `json:"amount"`
+	Amount   uint64 `json:"amount"`
 	Secret   string `json:"secret" gorm:"primaryKey"`
 	C        string `json:"C"`
 	TimeUsed time.Time
 }
 type Proof struct {
 	Id           string `json:"id"`
-	Amount       int64  `json:"amount"`
+	Amount       uint64 `json:"amount"`
 	Secret       string `json:"secret" gorm:"primaryKey"`
 	C            string `json:"C"`
 	Reserved     bool
@@ -46,7 +46,7 @@ type Proofs []Proof
 type Promise struct {
 	B_b    string `json:"C_b" gorm:"primaryKey"`
 	C_c    string `json:"C_c"`
-	Amount int64  `json:"amount"`
+	Amount uint64 `json:"amount"`
 }
 
 func (p Promise) Log() map[string]interface{} {
@@ -56,11 +56,11 @@ func (p Promise) Log() map[string]interface{} {
 type BlindedMessages []BlindedMessage
 
 type BlindedMessage struct {
-	Amount int64  `json:"amount"`
+	Amount uint64 `json:"amount"`
 	B_     string `json:"B_"`
 }
 type BlindedSignature struct {
-	Amount int64  `json:"amount"`
+	Amount uint64 `json:"amount"`
 	C_     string `json:"C_"`
 }
 
