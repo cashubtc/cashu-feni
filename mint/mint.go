@@ -20,7 +20,7 @@ import (
 	"strings"
 )
 
-const MaxOrder = 64
+const MaxOrder = 63
 
 // Mint implements all functions for a cashu ledger.
 type Mint struct {
