@@ -82,6 +82,10 @@ func (w MintWallet) checkUsedSecrets(amounts []uint64, secrets []string) error {
 	return nil
 }
 
+func (w MintWallet) availableBalance() uint64 {
+	return SumProofs(w.proofs)
+}
+
 func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 	secrets := make([]string, 0)
 	for range amounts {
@@ -180,6 +184,21 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 
+func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) error {
+	res, err := WalletClient.Melt(api.MeltRequest{Proofs: proofs, Invoice: invoice})
+	if err != nil {
+		return err
+	}
+	if res.Paid {
+		err = invalidate(proofs)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return fmt.Errorf("could not pay invoice")
+}
+
 func (w MintWallet) GetSpendableProofs() []cashu.Proof {
 	spendable := make([]cashu.Proof, 0)
 	for _, proof := range w.proofs {
@@ -261,7 +280,7 @@ func (w *MintWallet) Split(proofs []cashu.Proof, amount uint64, scndSecret strin
 		return nil, nil, err
 	}
 	for _, proof := range proofs {
-		err = invalidate(proof)
+		err = invalidateProof(proof)
 		if err != nil {
 			return nil, nil, err
 		}

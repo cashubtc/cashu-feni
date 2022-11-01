@@ -64,9 +64,12 @@ func (co CobraPrompt) Run() {
 	}
 
 	co.prepare()
-
+	co.RootCmd.SetIn(os.Stdin)
 	p := prompt.New(
 		func(in string) {
+			go func() {
+
+			}()
 			promptArgs := co.parseArgs(in)
 			os.Args = append([]string{os.Args[0]}, promptArgs...)
 			if err := co.RootCmd.Execute(); err != nil {

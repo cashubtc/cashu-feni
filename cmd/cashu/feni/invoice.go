@@ -2,9 +2,11 @@ package feni
 
 import (
 	"fmt"
+	"github.com/gohumble/cashu-feni/api"
 	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/mint"
+	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -79,7 +81,39 @@ func mintCmd(cmd *cobra.Command, args []string) {
 	}
 }
 
-func invalidate(proof cashu.Proof) error {
+func invalidate(proofs []cashu.Proof) error {
+	resp, err := WalletClient.Check(api.CheckRequest{Proofs: proofs})
+	if err != nil {
+		return err
+	}
+	invalidatedProofs := make([]cashu.Proof, 0)
+	for id, spendable := range resp {
+		if !spendable {
+			var pid int
+			pid, err = strconv.Atoi(id)
+			if err != nil {
+				return err
+			}
+			invalidatedProofs = append(invalidatedProofs, proofs[pid])
+			err = invalidateProof(proofs[pid])
+			if err != nil {
+				return err
+			}
+		}
+	}
+	invalidatedSecrets := make([]string, 0)
+	for _, proof := range invalidatedProofs {
+		invalidatedSecrets = append(invalidatedSecrets, proof.Secret)
+	}
+	Wallet.proofs = lo.Filter[cashu.Proof](Wallet.proofs, func(p cashu.Proof, i int) bool {
+		_, found := lo.Find[string](invalidatedSecrets, func(secret string) bool {
+			return secret == p.Secret
+		})
+		return !found
+	})
+	return nil
+}
+func invalidateProof(proof cashu.Proof) error {
 	err := storage.DeleteProof(proof)
 	if err != nil {
 		return err

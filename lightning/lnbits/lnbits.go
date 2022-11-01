@@ -84,7 +84,7 @@ func (c *Client) Pay(paymentRequest string) (wtx lightning.Invoice, err error) {
 	if err != nil {
 		return
 	}
-
+	invoice := Invoice{}
 	if resp.Response().StatusCode >= 300 {
 		var reqErr Error
 		err = resp.ToJSON(&reqErr)
@@ -95,7 +95,8 @@ func (c *Client) Pay(paymentRequest string) (wtx lightning.Invoice, err error) {
 		return
 	}
 
-	err = resp.ToJSON(&wtx)
+	err = resp.ToJSON(&invoice)
+	wtx = &invoice
 	return
 }
 

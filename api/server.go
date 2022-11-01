@@ -249,6 +249,7 @@ func (api Api) melt(w http.ResponseWriter, r *http.Request) {
 	payment, err := api.Mint.Melt(payload.Proofs, payload.Amount, payload.Invoice)
 	if err != nil {
 		log.WithFields(log.Fields{"error.message": err.Error()}).Errorf("error in melt")
+		return
 	}
 	response := MeltResponse{Paid: payment.IsPaid(), Preimage: payment.GetPreimage()}
 	res, err := json.Marshal(response)

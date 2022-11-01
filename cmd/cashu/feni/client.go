@@ -70,7 +70,7 @@ func (c Client) KeySets() (*api.GetKeySetsResponse, error) {
 	return &keySets, nil
 }
 
-func (c Client) Check(data api.CheckRequest) (*api.CheckResponse, error) {
+func (c Client) Check(data api.CheckRequest) (api.CheckResponse, error) {
 	resp, err := req.Post(fmt.Sprintf("%s/check", c.url), req.BodyJSON(data))
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (c Client) Check(data api.CheckRequest) (*api.CheckResponse, error) {
 	}
 	check := api.CheckResponse{}
 	err = resp.ToJSON(&check)
-	return &check, nil
+	return check, nil
 }
 
 func (c Client) Split(data api.SplitRequest) (*api.SplitResponse, error) {
@@ -143,7 +143,7 @@ func (c Client) GetMint(amount int64) (lightning.Invoice, error) {
 }
 
 func (c Client) CheckFee(CheckFeesRequest api.CheckFeesRequest) (*api.CheckFeesResponse, error) {
-	resp, err := req.Post(fmt.Sprintf("%s/mint", c.url), req.BodyJSON(CheckFeesRequest))
+	resp, err := req.Post(fmt.Sprintf("%s/checkfees", c.url), req.BodyJSON(CheckFeesRequest))
 	if err != nil {
 		return nil, err
 	}
