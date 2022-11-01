@@ -14,7 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"strings"
-	"time"
 )
 
 type Pair[T, U any] struct {
@@ -40,23 +39,6 @@ type MintWallet struct {
 }
 
 var Wallet MintWallet
-
-func init() {
-
-	rand.Seed(time.Now().UnixNano())
-
-	Wallet = MintWallet{proofs: make([]cashu.Proof, 0), keys: make(map[uint64]*secp256k1.PublicKey)}
-	mintServerPublickeys, err := WalletClient.Keys()
-	if err != nil {
-		panic(err)
-	}
-	Wallet.keys = mintServerPublickeys
-	keySet, err := WalletClient.KeySets()
-	if err != nil {
-		panic(err)
-	}
-	Wallet.keySet = keySet.KeySets[len(keySet.KeySets)-1]
-}
 
 func constructOutputs(amounts []uint64, secrets []string) (api.MintRequest, []*secp256k1.PrivateKey) {
 	payloads := api.MintRequest{BlindedMessages: make(cashu.BlindedMessages, 0)}

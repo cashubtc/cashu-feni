@@ -17,9 +17,6 @@ type Client struct {
 
 var WalletClient *Client
 
-func init() {
-	WalletClient = &Client{url: "http://0.0.0.0:3338"}
-}
 func checkError(resp *req.Resp) error {
 	if resp.Response().StatusCode >= 300 {
 		var reqErr cashu.ErrorResponse

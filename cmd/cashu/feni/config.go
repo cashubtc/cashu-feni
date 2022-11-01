@@ -1,14 +1,18 @@
 package feni
 
 import (
+	"fmt"
 	"github.com/caarlos0/env/v6"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/gohumble/cashu-feni/crypto"
 	"github.com/gohumble/cashu-feni/db"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
+	"math/rand"
 	"os"
 	"path"
+	"time"
 )
 
 var Config WalletConfig
@@ -53,6 +57,21 @@ func init() {
 	}
 	// initialize the default wallet (no other option selected using -w)
 	InitializeDatabase(Config.Wallet)
+
+	rand.Seed(time.Now().UnixNano())
+
+	Wallet = MintWallet{proofs: make([]cashu.Proof, 0), keys: make(map[uint64]*secp256k1.PublicKey)}
+	WalletClient = &Client{url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)}
+	mintServerPublickeys, err := WalletClient.Keys()
+	if err != nil {
+		panic(err)
+	}
+	Wallet.keys = mintServerPublickeys
+	keySet, err := WalletClient.KeySets()
+	if err != nil {
+		panic(err)
+	}
+	Wallet.keySet = keySet.KeySets[len(keySet.KeySets)-1]
 }
 
 func InitializeDatabase(wallet string) {
