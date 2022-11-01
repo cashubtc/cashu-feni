@@ -54,10 +54,10 @@ type SplitRequest struct {
 	Amount  uint64       `json:"amount"`
 	Outputs struct {
 		BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
-	} `json:"outputs"`
+	} `json:"outputs,omitempty"`
 	// todo -- remove output data in future version. This is only used for backward compatibility
 	// check https://github.com/callebtc/cashu/pull/20
-	OutputData struct {
+	OutputData *struct {
 		BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
-	} `json:"output_data" swaggerignore:"true"`
+	} `json:"output_data,omitempty" swaggerignore:"true"`
 }
