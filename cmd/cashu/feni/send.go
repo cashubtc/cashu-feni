@@ -11,15 +11,15 @@ import (
 
 func init() {
 	RootCmd.AddCommand(sendCommand)
-	sendCommand.PersistentFlags().StringVarP(&lockFlag, "lock", "l", "", "Lock coins (P2SH)")
+	sendCommand.PersistentFlags().StringVarP(&lockFlag, "lock", "l", "", "Lock tokens (P2SH)")
 }
 
 var lockFlag string
 
 var sendCommand = &cobra.Command{
 	Use:    "send",
-	Short:  "Send coins",
-	Long:   `Send cashu coins to another user`,
+	Short:  "Send tokens",
+	Long:   `Send cashu tokens to another user`,
 	PreRun: PreRunFeni,
 	Annotations: map[string]string{
 		DynamicSuggestionsAnnotation: getLocksAnnotationValue,

@@ -21,7 +21,7 @@ var GetLocksDynamic = func(annotationValue string) []prompt.Suggest {
 	}
 	suggestions := make([]prompt.Suggest, 0)
 	for _, script := range scripts {
-		suggestions = append(suggestions, prompt.Suggest{Text: fmt.Sprintf("P2SH:%s", script.Address), Description: fmt.Sprintf("Your P2SH lock for receiving and sending cashu coins")})
+		suggestions = append(suggestions, prompt.Suggest{Text: fmt.Sprintf("P2SH:%s", script.Address), Description: fmt.Sprintf("Your P2SH lock for receiving and sending cashu tokens")})
 
 	}
 	return suggestions
@@ -29,7 +29,7 @@ var GetLocksDynamic = func(annotationValue string) []prompt.Suggest {
 var locksCommand = &cobra.Command{
 	Use:    "locks",
 	Short:  "Show unused receiving locks",
-	Long:   `Generates a receiving lock for cashu coins.`,
+	Long:   `Generates a receiving lock for cashu tokens.`,
 	PreRun: PreRunFeni,
 	Annotations: map[string]string{
 		DynamicSuggestionsAnnotation: getLocksAnnotationValue,

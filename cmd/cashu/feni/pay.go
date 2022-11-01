@@ -18,7 +18,7 @@ func init() {
 var payCommand = &cobra.Command{
 	Use:    "pay",
 	Short:  "Pay lightning invoice",
-	Long:   `Pay a lightning invoice using cashu coins.`,
+	Long:   `Pay a lightning invoice using cashu tokens.`,
 	PreRun: PreRunFeni,
 	Run:    pay,
 }

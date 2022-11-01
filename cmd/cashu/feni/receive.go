@@ -11,14 +11,14 @@ import (
 
 func init() {
 	RootCmd.AddCommand(receiveCommand)
-	receiveCommand.PersistentFlags().StringVarP(&lockFlag, "lock", "l", "", "Lock coins (P2SH)")
+	receiveCommand.PersistentFlags().StringVarP(&lockFlag, "lock", "l", "", "Lock tokens (P2SH)")
 
 }
 
 var receiveCommand = &cobra.Command{
 	Use:    "receive",
-	Short:  "Receive coins",
-	Long:   `Receive cashu coins from another user`,
+	Short:  "Receive tokens",
+	Long:   `Receive cashu tokens from another user`,
 	PreRun: PreRunFeni,
 	Run:    receive,
 }

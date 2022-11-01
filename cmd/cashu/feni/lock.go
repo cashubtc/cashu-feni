@@ -17,7 +17,7 @@ func init() {
 var lockCommand = &cobra.Command{
 	Use:    "lock",
 	Short:  "Generate receiving lock",
-	Long:   `Generates a receiving lock for cashu coins.`,
+	Long:   `Generates a receiving lock for cashu tokens.`,
 	PreRun: PreRunFeni,
 	Run:    lock,
 }
