@@ -28,7 +28,7 @@ var GetLocksDynamic = func(annotationValue string) []prompt.Suggest {
 }
 var locksCommand = &cobra.Command{
 	Use:    "locks",
-	Short:  "Generate receiving lock",
+	Short:  "Show unused receiving locks",
 	Long:   `Generates a receiving lock for cashu coins.`,
 	PreRun: PreRunFeni,
 	Annotations: map[string]string{

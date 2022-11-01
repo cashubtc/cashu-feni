@@ -11,7 +11,7 @@ func init() {
 
 var balanceCommand = &cobra.Command{
 	Use:    "balance",
-	Short:  "Check your balance blyad",
+	Short:  "Check your balance",
 	Long:   ``,
 	PreRun: PreRunFeni,
 	Run:    balance,
