@@ -88,10 +88,6 @@ func (i Invoice) Log() map[string]interface{} {
 	return cashuLog.ToMap(i)
 }
 
-func (i Invoice) Log() map[string]interface{} {
-	return cashuLog.ToMap(i)
-}
-
 func (i Invoice) String() string {
 	b, err := json.Marshal(i)
 	if err != nil {

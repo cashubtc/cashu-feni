@@ -2,7 +2,6 @@ package cashu
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/lightning/lnbits"
 	cashuLog "github.com/gohumble/cashu-feni/log"
@@ -27,7 +26,6 @@ type Proof struct {
 	TimeCreated  time.Time   `json:"time_created,omitempty" structs:"TimeCreated,omitempty"`
 	TimeReserved time.Time   `json:"time_reserved,omitempty" structs:"TimeReserved,omitempty"`
 }
-
 
 func (p Proof) Log() map[string]interface{} {
 	return cashuLog.ToMap(p)

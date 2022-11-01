@@ -20,7 +20,7 @@ jobs:
       - name: Run Cashu Feni
         run: nohup go run cmd/mint/mint.go &
       - name: Golang run tests
-          run: go test -coverprofile=coverage.txt -covermode=atomic -v ./...
+        run: go test -coverprofile=coverage.txt -covermode=atomic -v ./...
       - uses: codecov/codecov-action@v3
         with:
           verbose: true # optional (default = false)
