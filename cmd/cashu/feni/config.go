@@ -40,7 +40,9 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = godotenv.Load(path.Join(dirname, ".cashu", ".env"))
+	p := path.Join(dirname, ".cashu", ".env")
+	log.Println("loading configuration from ")
+	err = godotenv.Load(p)
 	if err != nil {
 		defaultConfig()
 		return
