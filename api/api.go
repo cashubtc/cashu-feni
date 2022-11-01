@@ -36,7 +36,7 @@ type GetMintResponse struct {
 
 type MeltRequest struct {
 	Proofs  cashu.Proofs
-	Amount  uint64
+	Amount  int64
 	Invoice string
 }
 type CheckRequest struct {
@@ -44,14 +44,14 @@ type CheckRequest struct {
 }
 
 type CheckFeesResponse struct {
-	Fee uint64 `json:"fee"`
+	Fee int64 `json:"fee"`
 }
 type CheckFeesRequest struct {
 	Pr string `json:"pr"`
 }
 type SplitRequest struct {
 	Proofs  cashu.Proofs `json:"proofs"`
-	Amount  uint64       `json:"amount"`
+	Amount  int64        `json:"amount"`
 	Outputs struct {
 		BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
 	} `json:"outputs"`

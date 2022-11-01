@@ -69,4 +69,8 @@ func InitializeDatabase(wallet string) {
 	if err != nil {
 		panic(err)
 	}
+	err = storage.Migrate(cashu.CreateInvoice())
+	if err != nil {
+		panic(err)
+	}
 }

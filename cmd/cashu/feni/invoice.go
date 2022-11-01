@@ -3,6 +3,7 @@ package feni
 import (
 	"fmt"
 	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/mint"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -28,7 +29,7 @@ func mintCmd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	splitAmount := mint.AmountSplit(uint64(amount))
+	splitAmount := mint.AmountSplit(int64(amount))
 	if amount > 0 {
 		if !Config.Lightning {
 			if err := storeProofs(Wallet.mint(splitAmount, hash)); err != nil {
@@ -37,27 +38,39 @@ func mintCmd(cmd *cobra.Command, args []string) {
 			return
 		}
 		if hash == "" {
-			invoice, err := WalletClient.GetMint(uint64(amount))
+			var invoice lightning.Invoice
+			invoice, err = WalletClient.GetMint(int64(amount))
 			if err != nil {
 				panic(err)
 			}
+			err = storage.StoreLightningInvoice(invoice)
+			if err != nil {
+				log.Fatal(err)
+			}
+
 			fmt.Printf("Pay invoice to mint %d sat:\n", amount)
-			fmt.Printf("Invoice: %s\n", invoice.Pr)
-			fmt.Printf("Execute this command if you abort the check:\nfeni invoice {amount} --hash %s\n", invoice.Hash)
+			fmt.Printf("Invoice: %s\n", invoice.GetPaymentRequest())
+			fmt.Printf("Execute this command if you abort the check:\nfeni invoice {amount} --hash %s\n", invoice.GetHash())
 			fmt.Printf("Checking invoice ...")
 			for {
 				time.Sleep(time.Second * 3)
-				proofs := Wallet.mint(splitAmount, invoice.Hash)
+				proofs := Wallet.mint(splitAmount, invoice.GetHash())
 				if len(proofs) == 0 {
 					fmt.Print(".")
 					continue
 				}
 				// storeProofs
-				err := storeProofs(proofs)
+				err = storeProofs(proofs)
 				if err != nil {
 					log.Error(err.Error())
 				}
 				fmt.Println("Invoice paid.")
+				invoice.SetPaid(true)
+				invoice.SetPaid(true)
+				err = storage.UpdateLightningInvoice(invoice.GetHash(), true, true)
+				if err != nil {
+					log.Fatal(err)
+				}
 				return
 			}
 		} else {

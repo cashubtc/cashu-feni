@@ -6,7 +6,9 @@ import (
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/gohumble/cashu-feni/api"
 	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/imroc/req"
+	"time"
 )
 
 type Client struct {
@@ -30,7 +32,7 @@ func checkError(resp *req.Resp) error {
 	}
 	return nil
 }
-func (c Client) Keys() (map[uint64]*secp256k1.PublicKey, error) {
+func (c Client) Keys() (map[int64]*secp256k1.PublicKey, error) {
 	resp, err := req.Get(fmt.Sprintf("%s/keys", c.url))
 	if err != nil {
 		return nil, err
@@ -38,8 +40,8 @@ func (c Client) Keys() (map[uint64]*secp256k1.PublicKey, error) {
 	if err = checkError(resp); err != nil {
 		return nil, err
 	}
-	response := make(map[uint64]string)
-	keys := make(map[uint64]*secp256k1.PublicKey)
+	response := make(map[int64]string)
+	keys := make(map[int64]*secp256k1.PublicKey)
 	err = resp.ToJSON(&response)
 	for u, s := range response {
 		h, err := hex.DecodeString(s)
@@ -122,7 +124,7 @@ func (c Client) Mint(data api.MintRequest, paymentHash string) (*api.MintRespons
 	err = resp.ToJSON(&mint)
 	return &mint, nil
 }
-func (c Client) GetMint(amount uint64) (*api.GetMintResponse, error) {
+func (c Client) GetMint(amount int64) (lightning.Invoice, error) {
 	resp, err := req.Get(fmt.Sprintf("%s/mint?amount=%d", c.url, amount))
 	if err != nil {
 		return nil, err
@@ -132,7 +134,12 @@ func (c Client) GetMint(amount uint64) (*api.GetMintResponse, error) {
 	}
 	mint := api.GetMintResponse{}
 	err = resp.ToJSON(&mint)
-	return &mint, nil
+	invoice := cashu.CreateInvoice()
+	invoice.SetAmount(amount)
+	invoice.SetHash(mint.Hash)
+	invoice.SetPaymentRequest(mint.Pr)
+	invoice.SetTimeCreated(time.Now())
+	return invoice, nil
 }
 
 func (c Client) CheckFee(CheckFeesRequest api.CheckFeesRequest) (*api.CheckFeesResponse, error) {

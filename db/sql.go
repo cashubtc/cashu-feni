@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/gohumble/cashu-feni/lightning"
+	"github.com/gohumble/cashu-feni/lightning/lnbits"
 	cashuLog "github.com/gohumble/cashu-feni/log"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
@@ -113,6 +114,14 @@ func (s SqlDatabase) StoreLightningInvoice(i lightning.Invoice) error {
 	return s.db.Create(i).Error
 }
 
+// GetLightningInvoices
+func (s SqlDatabase) GetLightningInvoices(paid bool) ([]lnbits.Invoice, error) {
+	invoices := make([]lnbits.Invoice, 0)
+	var tx = s.db.Where("paid = ?", paid)
+	tx = tx.Find(&invoices)
+	return invoices, tx.Error
+}
+
 // GetLightningInvoice reads lighting invoice from db
 func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoice, error) {
 	invoice := cashu.CreateInvoice()
@@ -123,11 +132,12 @@ func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoice, error)
 }
 
 // UpdateLightningInvoice updates lightning invoice in db
-func (s SqlDatabase) UpdateLightningInvoice(hash string, issued bool) error {
+func (s SqlDatabase) UpdateLightningInvoice(hash string, issued, paid bool) error {
 	i, err := s.GetLightningInvoice(hash)
 	if err != nil {
 		return err
 	}
 	i.SetIssued(issued)
+	i.SetPaid(paid)
 	return s.db.Save(i).Error
 }

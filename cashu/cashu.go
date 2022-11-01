@@ -10,21 +10,21 @@ import (
 )
 
 type ProofsUsed struct {
-	Amount   uint64 `json:"amount"`
+	Amount   int64  `json:"amount"`
 	Secret   string `json:"secret" gorm:"primaryKey"`
 	C        string `json:"C"`
 	TimeUsed time.Time
 }
 type Proof struct {
 	Id           string `json:"id"`
-	Amount       uint64 `json:"amount"`
+	Amount       int64  `json:"amount"`
 	Secret       string `json:"secret" gorm:"primaryKey"`
 	C            string `json:"C"`
 	Reserved     bool
 	Script       *P2SHScript `gorm:"-" json:"script" structs:"Script,omitempty"`
-	SendId       uuid.UUID
-	TimeCreated  time.Time
-	TimeReserved time.Time
+	SendId       uuid.UUID   `json:"send_id,omitempty" structs:"SendId,omitempty"`
+	TimeCreated  time.Time   `json:"time_created,omitempty" structs:"TimeCreated,omitempty"`
+	TimeReserved time.Time   `json:"time_reserved,omitempty" structs:"TimeReserved,omitempty"`
 }
 
 func (p Proof) Log() map[string]interface{} {
@@ -46,7 +46,7 @@ type Proofs []Proof
 type Promise struct {
 	B_b    string `json:"C_b" gorm:"primaryKey"`
 	C_c    string `json:"C_c"`
-	Amount uint64 `json:"amount"`
+	Amount int64  `json:"amount"`
 }
 
 func (p Promise) Log() map[string]interface{} {
@@ -56,11 +56,11 @@ func (p Promise) Log() map[string]interface{} {
 type BlindedMessages []BlindedMessage
 
 type BlindedMessage struct {
-	Amount uint64 `json:"amount"`
+	Amount int64  `json:"amount"`
 	B_     string `json:"B_"`
 }
 type BlindedSignature struct {
-	Amount uint64 `json:"amount"`
+	Amount int64  `json:"amount"`
 	C_     string `json:"C_"`
 }
 

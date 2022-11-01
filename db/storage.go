@@ -3,6 +3,7 @@ package db
 import (
 	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/gohumble/cashu-feni/lightning"
+	"github.com/gohumble/cashu-feni/lightning/lnbits"
 )
 
 type MintStorage interface {
@@ -16,6 +17,8 @@ type MintStorage interface {
 	GetScripts(address string) ([]cashu.P2SHScript, error)
 	StoreLightningInvoice(i lightning.Invoice) error
 	GetLightningInvoice(hash string) (lightning.Invoice, error)
-	UpdateLightningInvoice(hash string, issued bool) error
+	GetLightningInvoices(paid bool) ([]lnbits.Invoice, error) // todo -- the return type of this interface function must be of type lightning.Invoice
+	UpdateLightningInvoice(hash string, issued bool, paid bool) error
+
 	Migrate(interface{}) error
 }

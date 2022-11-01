@@ -24,5 +24,5 @@ func pay(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(WalletClient.GetMint(uint64(amount)))
+	fmt.Println(WalletClient.GetMint(int64(amount)))
 }

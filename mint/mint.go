@@ -106,7 +106,7 @@ func (m Mint) GetKeySet() []string {
 }
 
 // requestMint will create and return the lightning invoice for a mint
-func (m *Mint) RequestMint(amount uint64) (lightning.Invoice, error) {
+func (m *Mint) RequestMint(amount int64) (lightning.Invoice, error) {
 	if m.client == nil {
 		invoice := lnbits.NewInvoice()
 		invoice.SetAmount(amount)
@@ -123,12 +123,12 @@ func (m *Mint) RequestMint(amount uint64) (lightning.Invoice, error) {
 	}
 	return invoice, nil
 }
-func (m *Mint) CheckFees(pr string) (uint64, error) {
+func (m *Mint) CheckFees(pr string) (int64, error) {
 	decodedInvoice, err := decodepay.Decodepay(pr)
 	if err != nil {
 		return 0, err
 	}
-	amount := uint64(math.Ceil(float64(decodedInvoice.MSatoshi / 1000)))
+	amount := int64(math.Ceil(float64(decodedInvoice.MSatoshi / 1000)))
 	// hack: check if it's internal, if it exists, it will return paid = False,
 	// if id does not exist (not internal), it returns paid = None
 	invoice, err := m.client.InvoiceStatus(decodedInvoice.PaymentHash)
@@ -141,7 +141,7 @@ func (m *Mint) CheckFees(pr string) (uint64, error) {
 }
 
 // checkLightningInvoice will check the lightning invoice amount matches the outputs amount.
-func (m *Mint) checkLightningInvoice(amounts []uint64, paymentHash string) (bool, error) {
+func (m *Mint) checkLightningInvoice(amounts []int64, paymentHash string) (bool, error) {
 	invoice, err := m.database.GetLightningInvoice(paymentHash)
 	if err != nil {
 		return false, err
@@ -154,7 +154,7 @@ func (m *Mint) checkLightningInvoice(amounts []uint64, paymentHash string) (bool
 		return false, err
 	}
 	// sum all amounts
-	total := lo.SumBy[uint64](amounts, func(amount uint64) uint64 {
+	total := lo.SumBy[int64](amounts, func(amount int64) int64 {
 		return amount
 	})
 	// validate total and invoice amount
@@ -165,7 +165,7 @@ func (m *Mint) checkLightningInvoice(amounts []uint64, paymentHash string) (bool
 		return false, err
 	}
 	if payment.IsPaid() {
-		err = m.database.UpdateLightningInvoice(paymentHash, true)
+		err = m.database.UpdateLightningInvoice(paymentHash, true, true)
 		if err != nil {
 			// todo -- check if we rly want to return false here!
 			return false, err
@@ -175,7 +175,7 @@ func (m *Mint) checkLightningInvoice(amounts []uint64, paymentHash string) (bool
 }
 
 // payLightningInvoice will pay pr using master wallet
-func (m *Mint) payLightningInvoice(pr string, feeLimitMSat uint64) (lightning.Payment, error) {
+func (m *Mint) payLightningInvoice(pr string, feeLimitMSat int64) (lightning.Payment, error) {
 	invoice, err := m.client.Pay(pr)
 	if err != nil {
 		return lnbits.LNbitsPayment{}, err
@@ -185,7 +185,7 @@ func (m *Mint) payLightningInvoice(pr string, feeLimitMSat uint64) (lightning.Pa
 
 func (m Mint) mint(messages cashu.BlindedMessages, pr string, keySet *crypto.KeySet) ([]cashu.BlindedSignature, error) {
 	publicKeys := make([]*secp256k1.PublicKey, 0)
-	var amounts []uint64
+	var amounts []int64
 	for _, msg := range messages {
 		amounts = append(amounts, msg.Amount)
 		hkey := make([]byte, 0)
@@ -227,7 +227,7 @@ func (m Mint) MintWithoutKeySet(messages cashu.BlindedMessages, pr string) ([]ca
 }
 
 // generatePromise will generate promise and signature for given amount using public key
-func (m *Mint) generatePromise(amount uint64, keySet *crypto.KeySet, B_ *secp256k1.PublicKey) (cashu.BlindedSignature, error) {
+func (m *Mint) generatePromise(amount int64, keySet *crypto.KeySet, B_ *secp256k1.PublicKey) (cashu.BlindedSignature, error) {
 	C_ := crypto.SecondStepBob(*B_, *m.keySets[keySet.Id].PrivateKeys.GetKeyByAmount(uint64(amount)).Key)
 	err := m.database.StorePromise(cashu.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
 	if err != nil {
@@ -237,7 +237,7 @@ func (m *Mint) generatePromise(amount uint64, keySet *crypto.KeySet, B_ *secp256
 }
 
 // generatePromises will generate multiple promises and signatures
-func (m *Mint) generatePromises(amounts []uint64, keySet *crypto.KeySet, keys []*secp256k1.PublicKey) ([]cashu.BlindedSignature, error) {
+func (m *Mint) generatePromises(amounts []int64, keySet *crypto.KeySet, keys []*secp256k1.PublicKey) ([]cashu.BlindedSignature, error) {
 	promises := make([]cashu.BlindedSignature, 0)
 	for i, key := range keys {
 		p, err := m.generatePromise(amounts[i], keySet, key)
@@ -292,12 +292,12 @@ func verifyScript(proof cashu.Proof) (addr *btcutil.AddressScriptHash, err error
 }
 
 // verifyOutputs verify output data
-func verifyOutputs(total, amount uint64, outputs []cashu.BlindedMessage) (bool, error) {
+func verifyOutputs(total, amount int64, outputs []cashu.BlindedMessage) (bool, error) {
 	fstAmt, sndAmt := total-amount, amount
 	fstOutputs := AmountSplit(fstAmt)
 	sndOutputs := AmountSplit(sndAmt)
 	expected := append(fstOutputs, sndOutputs...)
-	given := make([]uint64, 0)
+	given := make([]int64, 0)
 	for _, o := range outputs {
 		given = append(given, o.Amount)
 	}
@@ -349,12 +349,12 @@ func (m *Mint) checkSpendable(proof cashu.Proof) bool {
 }
 
 // AmountSplit will convert amount into binary and return array with decimal binary values
-func AmountSplit(amount uint64) []uint64 {
-	bin := reverse(strconv.FormatUint(amount, 2))
-	rv := make([]uint64, 0)
+func AmountSplit(amount int64) []int64 {
+	bin := reverse(strconv.FormatInt(amount, 2))
+	rv := make([]int64, 0)
 	for i, b := range []byte(bin) {
 		if b == 49 {
-			rv = append(rv, uint64(math.Pow(2, float64(i))))
+			rv = append(rv, int64(math.Pow(2, float64(i))))
 		}
 	}
 	return rv
@@ -370,13 +370,13 @@ func reverse(s string) string {
 }
 
 // verifySplitAmount will verify amount
-func verifySplitAmount(amount uint64) (uint64, error) {
+func verifySplitAmount(amount int64) (int64, error) {
 	return verifyAmount(amount)
 }
 
 // verifyAmount make sure that amount is bigger than zero and smaller than 2^MaxOrder
-func verifyAmount(amount uint64) (uint64, error) {
-	if amount < 0 || amount > uint64(math.Pow(2, MaxOrder)) {
+func verifyAmount(amount int64) (int64, error) {
+	if amount < 0 || amount > int64(math.Pow(2, MaxOrder)) {
 		return 0, fmt.Errorf("invalid split amount: %d", amount)
 	}
 	return amount, nil
@@ -384,8 +384,8 @@ func verifyAmount(amount uint64) (uint64, error) {
 
 // verifyEquationBalanced verify that equation is balanced.
 func verifyEquationBalanced(proofs []cashu.Proof, outs []cashu.BlindedSignature) (bool, error) {
-	var sumInputs uint64
-	var sumOutputs uint64
+	var sumInputs int64
+	var sumOutputs int64
 	// sum proof amounts
 	for _, proof := range proofs {
 		in, err := verifyAmount(proof.Amount)
@@ -443,8 +443,8 @@ if not all( [self._verify_proof(p) for p in proofs]):
 raise Exception ("could not verify proofs.")
 */
 // melt will meld proofs
-func (m *Mint) Melt(proofs []cashu.Proof, amount uint64, invoice string) (payment lightning.Payment, err error) {
-	var total uint64
+func (m *Mint) Melt(proofs []cashu.Proof, amount int64, invoice string) (payment lightning.Payment, err error) {
+	var total int64
 	for _, proof := range proofs {
 		// verify every proof and sum total amount
 		err = m.verifyProof(proof)
@@ -455,7 +455,7 @@ func (m *Mint) Melt(proofs []cashu.Proof, amount uint64, invoice string) (paymen
 	}
 	// decode invoice and use this amount instead of melt amount
 	bolt, err := decodepay.Decodepay(invoice)
-	amount = uint64(math.Ceil(float64(bolt.MSatoshi / 1000)))
+	amount = int64(math.Ceil(float64(bolt.MSatoshi / 1000)))
 	fee, err := m.CheckFees(invoice)
 	if err != nil {
 		return nil, err
@@ -477,8 +477,8 @@ func (m *Mint) Melt(proofs []cashu.Proof, amount uint64, invoice string) (paymen
 }
 
 // split will split proofs. creates BlindedSignatures from BlindedMessages.
-func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.BlindedMessage, keySet *crypto.KeySet) ([]cashu.BlindedSignature, []cashu.BlindedSignature, error) {
-	total := lo.SumBy[cashu.Proof](proofs, func(p cashu.Proof) uint64 {
+func (m *Mint) Split(proofs []cashu.Proof, amount int64, outputs []cashu.BlindedMessage, keySet *crypto.KeySet) ([]cashu.BlindedSignature, []cashu.BlindedSignature, error) {
+	total := lo.SumBy[cashu.Proof](proofs, func(p cashu.Proof) int64 {
 		return p.Amount
 	})
 	if amount > total {
