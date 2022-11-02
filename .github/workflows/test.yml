@@ -47,4 +47,5 @@ jobs:
           MINT_PORT: 3338
         run: |
           cd cashu
+          export TOR=false
           poetry run pytest tests
