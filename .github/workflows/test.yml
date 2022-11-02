@@ -34,7 +34,7 @@ jobs:
           poetry-version: ${{ matrix.poetry-version }}
       - uses: actions/checkout@v2
         with:
-          repository: callebtc/cashu
+          repository: cashubtc/cashu
           path: cashu
       - name: Install dependencies
         run: |
