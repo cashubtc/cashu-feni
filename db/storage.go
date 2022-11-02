@@ -7,7 +7,8 @@ import (
 )
 
 type MintStorage interface {
-	GetUsedProofs() []cashu.Proof
+	GetUsedProofs() ([]cashu.Proof, error)
+	GetReservedProofs() ([]cashu.Proof, error)
 	ProofsUsed([]string) []cashu.Proof
 	StoreProof(proof cashu.Proof) error
 	DeleteProof(proof cashu.Proof) error

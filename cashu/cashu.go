@@ -6,6 +6,7 @@ import (
 	"github.com/gohumble/cashu-feni/lightning/lnbits"
 	cashuLog "github.com/gohumble/cashu-feni/log"
 	"github.com/google/uuid"
+	"strings"
 	"time"
 )
 
@@ -27,6 +28,9 @@ type Proof struct {
 	TimeReserved time.Time   `json:"time_reserved,omitempty" structs:"TimeReserved,omitempty"`
 }
 
+func IsPay2ScriptHash(s string) bool {
+	return len(strings.Split(s, "P2SH:")) == 2
+}
 func (p Proof) Log() map[string]interface{} {
 	return cashuLog.ToMap(p)
 }

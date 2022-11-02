@@ -43,7 +43,13 @@ func PreRunFeni(cmd *cobra.Command, args []string) {
 	if WalletUsed != "wallet" {
 		InitializeDatabase(WalletUsed)
 	}
-	Wallet.proofs = storage.GetUsedProofs()
+	var err error
+
+	Wallet.proofs, err = storage.GetUsedProofs()
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 var RootCmd = &cobra.Command{

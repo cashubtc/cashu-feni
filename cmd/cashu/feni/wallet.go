@@ -13,7 +13,7 @@ import (
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
-	"strings"
+	"time"
 )
 
 type Pair[T, U any] struct {
@@ -134,7 +134,7 @@ func (w MintWallet) balancePerKeySet() Balance {
 func generateSecrets(secret string, n int) []string {
 	secrets := make([]string, 0)
 	var generator func(i int)
-	if len(strings.Split(secret, "P2SH:")) == 2 {
+	if cashu.IsPay2ScriptHash(secret) {
 		generator = func(i int) {
 			secrets = append(secrets, fmt.Sprintf("%s:%s", secret, generateSecret()))
 		}
@@ -216,6 +216,7 @@ func (w MintWallet) setReserved(p []cashu.Proof, reserved bool) error {
 	for _, proof := range p {
 		proof.Reserved = reserved
 		proof.SendId = uuid.New()
+		proof.TimeReserved = time.Now()
 		err := storage.StoreProof(proof)
 		if err != nil {
 			return err

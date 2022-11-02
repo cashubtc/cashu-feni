@@ -6,7 +6,6 @@ import (
 	"github.com/gohumble/cashu-feni/bitcoin"
 	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 func init() {
@@ -22,11 +21,8 @@ var lockCommand = &cobra.Command{
 	Run:    lock,
 }
 
-func isPay2ScriptHash(s string) bool {
-	return len(strings.Split(s, "P2SH:")) == 2
-}
 func flagIsPay2ScriptHash() bool {
-	return isPay2ScriptHash(lockFlag)
+	return cashu.IsPay2ScriptHash(lockFlag)
 }
 
 func lock(cmd *cobra.Command, args []string) {

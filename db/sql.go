@@ -72,11 +72,18 @@ func (s SqlDatabase) ProofsUsed(in []string) []cashu.Proof {
 	return proofs
 }
 
-// GetUsedProofs reads all proofs from db
-func (s SqlDatabase) GetUsedProofs() []cashu.Proof {
+func (s SqlDatabase) GetReservedProofs() ([]cashu.Proof, error) {
 	proofs := make([]cashu.Proof, 0)
-	s.db.Find(&proofs)
-	return proofs
+	var tx = s.db.Where("reserved = ?", true)
+	tx = tx.Find(&proofs)
+	return proofs, tx.Error
+}
+
+// GetUsedProofs reads all proofs from db
+func (s SqlDatabase) GetUsedProofs() ([]cashu.Proof, error) {
+	proofs := make([]cashu.Proof, 0)
+	tx := s.db.Find(&proofs)
+	return proofs, tx.Error
 }
 
 // InvalidateProof will write proof to db

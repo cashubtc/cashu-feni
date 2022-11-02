@@ -14,6 +14,7 @@ import (
 	"github.com/gohumble/cashu-feni/lightning/lnbits"
 	decodepay "github.com/nbd-wtf/ln-decodepay"
 	"github.com/samber/lo"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"reflect"
 	"strconv"
@@ -50,7 +51,12 @@ func New(masterKey string, opt ...Options) *Mint {
 		o(l)
 	}
 	if l.database != nil {
-		lo.ForEach[cashu.Proof](l.database.GetUsedProofs(), func(proof cashu.Proof, i int) {
+		p, err := l.database.GetUsedProofs()
+		if err != nil {
+			log.Warnf("could not load used proofs")
+			return l
+		}
+		lo.ForEach[cashu.Proof](p, func(proof cashu.Proof, i int) {
 			l.proofsUsed = append(l.proofsUsed, proof.Secret)
 		})
 	}
@@ -272,13 +278,14 @@ func (m *Mint) verifyProof(proof cashu.Proof) error {
 
 func verifyScript(proof cashu.Proof) (addr *btcutil.AddressScriptHash, err error) {
 	if proof.Script == nil || proof.Script.Script == "" || proof.Script.Signature == "" {
-		if len(strings.Split(proof.Secret, "P2SH:")) == 2 {
+		if cashu.IsPay2ScriptHash(proof.Secret) {
 			return nil, fmt.Errorf("secret indicates a script but no script is present")
 		} else {
 			// secret indicates no script, so treat script as valid
 			return nil, nil
 		}
 	}
+
 	// decode payloads
 	pubScriptKey, err := base64.URLEncoding.DecodeString(proof.Script.Script)
 	if err != nil {
