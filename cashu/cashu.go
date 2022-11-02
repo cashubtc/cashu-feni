@@ -21,7 +21,7 @@ type Proof struct {
 	Secret       string      `json:"secret" gorm:"primaryKey"`
 	C            string      `json:"C"`
 	Reserved     bool        `json:"reserved,omitempty"`
-	Script       *P2SHScript `gorm:"-" json:"scrip,omitempty" structs:"Script,omitempty"`
+	Script       *P2SHScript `gorm:"-" json:"script,omitempty" structs:"Script,omitempty"`
 	SendId       uuid.UUID   `json:"send_id,omitempty" structs:"SendId,omitempty"`
 	TimeCreated  time.Time   `json:"time_created,omitempty" structs:"TimeCreated,omitempty"`
 	TimeReserved time.Time   `json:"time_reserved,omitempty" structs:"TimeReserved,omitempty"`
