@@ -139,12 +139,13 @@ func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoice, error)
 }
 
 // UpdateLightningInvoice updates lightning invoice in db
-func (s SqlDatabase) UpdateLightningInvoice(hash string, issued, paid bool) error {
+func (s SqlDatabase) UpdateLightningInvoice(hash string, options ...UpdateInvoiceOptions) error {
 	i, err := s.GetLightningInvoice(hash)
 	if err != nil {
 		return err
 	}
-	i.SetIssued(issued)
-	i.SetPaid(paid)
+	for _, option := range options {
+		option(i)
+	}
 	return s.db.Save(i).Error
 }

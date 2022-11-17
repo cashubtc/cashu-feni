@@ -30,6 +30,7 @@ type Invoice interface {
 	SetPaymentRequest(string)  // SetPaymentRequest
 
 	SetTimeCreated(t time.Time)
+	SetTimePaid(t time.Time)
 }
 
 // Payment should give information about the payment status

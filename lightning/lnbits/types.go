@@ -82,6 +82,7 @@ type Invoice struct {
 	Preimage string    `json:"preimage"`
 	Paid     bool      `json:"paid"`
 	Create   time.Time `json:"time_created"`
+	TimePaid time.Time `json:"time_paid"`
 }
 
 func (i Invoice) Log() map[string]interface{} {
@@ -106,6 +107,10 @@ func (i *Invoice) GetHash() string {
 func (i *Invoice) SetTimeCreated(t time.Time) {
 	i.Create = t
 }
+func (i *Invoice) SetTimePaid(t time.Time) {
+	i.TimePaid = t
+}
+
 func (i *Invoice) SetPaymentRequest(pr string) {
 	i.Pr = pr
 }

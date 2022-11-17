@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gohumble/cashu-feni/api"
 	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/gohumble/cashu-feni/db"
 	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/mint"
 	"github.com/samber/lo"
@@ -67,16 +68,14 @@ func mintCmd(cmd *cobra.Command, args []string) {
 					log.Error(err.Error())
 				}
 				fmt.Println("Invoice paid.")
-				invoice.SetPaid(true)
-				invoice.SetPaid(true)
-				err = storage.UpdateLightningInvoice(invoice.GetHash(), true, true)
+				err = storage.UpdateLightningInvoice(invoice.GetHash(), db.UpdateInvoicePaid(true))
 				if err != nil {
 					log.Fatal(err)
 				}
 				return
 			}
 		} else {
-
+			Wallet.Mint(uint64(amount), hash)
 		}
 	}
 }

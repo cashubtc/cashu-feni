@@ -171,7 +171,7 @@ func (m *Mint) checkLightningInvoice(amounts []uint64, paymentHash string) (bool
 		return false, err
 	}
 	if payment.IsPaid() {
-		err = m.database.UpdateLightningInvoice(paymentHash, true, true)
+		err = m.database.UpdateLightningInvoice(paymentHash, db.UpdateInvoicePaid(true), db.UpdateInvoiceWithIssued(true))
 		if err != nil {
 			// todo -- check if we rly want to return false here!
 			return false, err

@@ -8,6 +8,7 @@ import (
 	"github.com/gohumble/cashu-feni/api"
 	"github.com/gohumble/cashu-feni/cashu"
 	"github.com/gohumble/cashu-feni/crypto"
+	"github.com/gohumble/cashu-feni/db"
 	"github.com/gohumble/cashu-feni/mint"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -68,6 +69,29 @@ func (w MintWallet) availableBalance() uint64 {
 	return SumProofs(w.proofs)
 }
 
+func (w MintWallet) Mint(amount uint64, paymentHash string) ([]cashu.Proof, error) {
+	split := mint.AmountSplit(amount)
+	proofs := w.mint(split, paymentHash)
+	if len(proofs) == 0 {
+		return nil, fmt.Errorf("received no proofs.")
+	}
+	err := storeProofs(proofs)
+	if err != nil {
+		return nil, err
+	}
+	if paymentHash != "" {
+		err = storage.UpdateLightningInvoice(
+			hash,
+			db.UpdateInvoicePaid(true),
+			db.UpdateInvoiceTimePaid(time.Now()),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+	w.proofs = append(w.proofs, proofs...)
+	return proofs, nil
+}
 func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 	secrets := make([]string, 0)
 	for range amounts {
