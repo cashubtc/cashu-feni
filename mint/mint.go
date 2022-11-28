@@ -450,7 +450,7 @@ if not all( [self._verify_proof(p) for p in proofs]):
 raise Exception ("could not verify proofs.")
 */
 // melt will meld proofs
-func (m *Mint) Melt(proofs []cashu.Proof, amount uint64, invoice string) (payment lightning.Payment, err error) {
+func (m *Mint) Melt(proofs []cashu.Proof, invoice string) (payment lightning.Payment, err error) {
 	var total uint64
 	for _, proof := range proofs {
 		// verify every proof and sum total amount
@@ -462,7 +462,7 @@ func (m *Mint) Melt(proofs []cashu.Proof, amount uint64, invoice string) (paymen
 	}
 	// decode invoice and use this amount instead of melt amount
 	bolt, err := decodepay.Decodepay(invoice)
-	amount = uint64(math.Ceil(float64(bolt.MSatoshi / 1000)))
+	amount := uint64(math.Ceil(float64(bolt.MSatoshi / 1000)))
 	fee, err := m.CheckFees(invoice)
 	if err != nil {
 		return nil, err

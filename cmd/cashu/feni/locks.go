@@ -38,7 +38,10 @@ var locksCommand = &cobra.Command{
 }
 
 func locks(cmd *cobra.Command, args []string) {
-	fmt.Println(getP2SHLocks())
+	scriptLocks := getP2SHLocks()
+	for _, l := range scriptLocks {
+		fmt.Printf("P2SH:%s\n", l.Address)
+	}
 }
 
 func getP2SHLocks() []cashu.P2SHScript {

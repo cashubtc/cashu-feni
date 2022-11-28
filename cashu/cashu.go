@@ -23,9 +23,9 @@ type Proof struct {
 	C            string      `json:"C"`
 	Reserved     bool        `json:"reserved,omitempty"`
 	Script       *P2SHScript `gorm:"-" json:"script,omitempty" structs:"Script,omitempty"`
-	SendId       uuid.UUID   `json:"send_id,omitempty" structs:"SendId,omitempty"`
-	TimeCreated  time.Time   `json:"time_created,omitempty" structs:"TimeCreated,omitempty"`
-	TimeReserved time.Time   `json:"time_reserved,omitempty" structs:"TimeReserved,omitempty"`
+	SendId       uuid.UUID   `json:"-,omitempty" structs:"SendId,omitempty"`
+	TimeCreated  time.Time   `json:"-,omitempty" structs:"TimeCreated,omitempty"`
+	TimeReserved time.Time   `json:"-,omitempty" structs:"TimeReserved,omitempty"`
 }
 
 func IsPay2ScriptHash(s string) bool {
@@ -36,9 +36,9 @@ func (p Proof) Log() map[string]interface{} {
 }
 
 type P2SHScript struct {
-	Script    string
-	Signature string
-	Address   string
+	Script    string `json:"script"`
+	Signature string `json:"signature"`
+	Address   string `json:"address"`
 }
 
 func (p Proof) Decode() ([]byte, error) {
@@ -64,6 +64,7 @@ type BlindedMessage struct {
 	B_     string `json:"B_"`
 }
 type BlindedSignature struct {
+	Id     string `json:"id"`
 	Amount uint64 `json:"amount"`
 	C_     string `json:"C_"`
 }

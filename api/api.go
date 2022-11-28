@@ -13,6 +13,7 @@ type Api struct {
 }
 
 type MintResponse []cashu.BlindedSignature
+
 type MintRequest struct {
 	BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
 }
@@ -35,12 +36,11 @@ type GetMintResponse struct {
 }
 
 type MeltRequest struct {
-	Proofs  cashu.Proofs
-	Amount  uint64
-	Invoice string
+	Proofs  cashu.Proofs `json:"proofs"`
+	Invoice string       `json:"invoice"`
 }
 type CheckRequest struct {
-	Proofs cashu.Proofs
+	Proofs cashu.Proofs `json:"proofs"`
 }
 
 type CheckFeesResponse struct {
