@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/gohumble/cashu-feni/crypto"
 	"github.com/gohumble/cashu-feni/db"
 	"github.com/gohumble/cashu-feni/mint"
 	"github.com/gorilla/mux"
@@ -24,6 +25,22 @@ func New() *Api {
 	// currently using sql storage only.
 	// this should be extensible for future versions.
 	sqlStorage := db.NewSqlDatabase()
+	err := sqlStorage.Migrate(cashu.Proof{})
+	if err != nil {
+		panic(err)
+	}
+	err = sqlStorage.Migrate(cashu.Promise{})
+	if err != nil {
+		panic(err)
+	}
+	err = sqlStorage.Migrate(crypto.KeySet{})
+	if err != nil {
+		panic(err)
+	}
+	err = sqlStorage.Migrate(cashu.CreateInvoice())
+	if err != nil {
+		panic(err)
+	}
 	srv := &http.Server{
 		Addr:         fmt.Sprintf("%s:%s", Config.Mint.Host, Config.Mint.Port),
 		WriteTimeout: 90 * time.Second,
@@ -229,9 +246,10 @@ func (api Api) melt(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	payment, err := api.Mint.Melt(payload.Proofs, payload.Amount, payload.Invoice)
+	payment, err := api.Mint.Melt(payload.Proofs, payload.Invoice)
 	if err != nil {
 		log.WithFields(log.Fields{"error.message": err.Error()}).Errorf("error in melt")
+		return
 	}
 	response := MeltResponse{Paid: payment.IsPaid(), Preimage: payment.GetPreimage()}
 	res, err := json.Marshal(response)
@@ -353,17 +371,13 @@ func (api Api) split(w http.ResponseWriter, r *http.Request) {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	fstb, err := json.Marshal(fstPromise)
+	response := SplitResponse{Fst: fstPromise, Snd: sendPromise}
+	res, err := json.Marshal(response)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	sstb, err := json.Marshal(sendPromise)
-	if err != nil {
-		responseError(w, cashu.NewErrorResponse(err))
-		return
-	}
-	_, err = fmt.Fprintf(w, fmt.Sprintf(`{"fst": %s, "snd": %s}`, string(fstb), string(sstb)))
+	_, err = fmt.Fprintf(w, string(res))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return

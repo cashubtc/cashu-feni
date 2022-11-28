@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	cashuLog "github.com/gohumble/cashu-feni/log"
 	"github.com/imroc/req"
+	"time"
 )
 
 type Client struct {
@@ -15,7 +16,7 @@ type Client struct {
 
 type InvoiceParams struct {
 	Out                 bool   `json:"out"`                            // must be True if invoice is paid, False if invoice is received
-	Amount              uint64 `json:"amount"`                         // amount in Satoshi
+	Amount              int64  `json:"amount"`                         // amount in Satoshi
 	Memo                string `json:"memo,omitempty"`                 // the invoice memo.
 	Webhook             string `json:"webhook,omitempty"`              // the webhook to fire back to when payment is received.
 	DescriptionHash     string `json:"description_hash,omitempty"`     // the invoice description hash.
@@ -25,7 +26,7 @@ type InvoiceParams struct {
 type PaymentParams struct {
 	Out          bool   `json:"out"`
 	Bolt11       string `json:"bolt11"`
-	FeeLimitMSat uint64 `json:"feeLimitMSat"`
+	FeeLimitMSat int64  `json:"feeLimitMSat"`
 }
 type PayParams struct {
 	// the BOLT11 payment request you want to pay.
@@ -61,7 +62,7 @@ type Wallet struct {
 type PaymentDetails struct {
 	CheckingID    string      `json:"checking_id"`
 	Pending       bool        `json:"pending"`
-	Amount        uint64      `json:"amount"`
+	Amount        int64       `json:"amount"`
 	Fee           uint64      `json:"fee"`
 	Memo          string      `json:"memo"`
 	Time          int         `json:"time"`
@@ -74,10 +75,14 @@ type PaymentDetails struct {
 	WebhookStatus interface{} `json:"webhook_status"`
 }
 type Invoice struct {
-	Amount uint64 `json:"amount"`
-	Pr     string `json:"payment_request"`
-	Hash   string `json:"payment_hash" gorm:"primaryKey"`
-	Issued bool   `json:"issued"`
+	Amount   int64     `json:"amount"`
+	Pr       string    `json:"payment_request"`
+	Hash     string    `json:"payment_hash" gorm:"primaryKey"`
+	Issued   bool      `json:"issued"`
+	Preimage string    `json:"preimage"`
+	Paid     bool      `json:"paid"`
+	Create   time.Time `json:"time_created"`
+	TimePaid time.Time `json:"time_paid"`
 }
 
 func (i Invoice) Log() map[string]interface{} {
@@ -99,17 +104,30 @@ func (i *Invoice) SetHash(h string) {
 func (i *Invoice) GetHash() string {
 	return i.Hash
 }
+func (i *Invoice) SetTimeCreated(t time.Time) {
+	i.Create = t
+}
+func (i *Invoice) SetTimePaid(t time.Time) {
+	i.TimePaid = t
+}
+
+func (i *Invoice) SetPaymentRequest(pr string) {
+	i.Pr = pr
+}
 func (i *Invoice) GetPaymentRequest() string {
 	return i.Pr
+}
+func (i *Invoice) SetPaid(paid bool) {
+	i.Paid = paid
 }
 func (i *Invoice) SetIssued(issued bool) {
 	i.Issued = issued
 }
 
-func (i *Invoice) SetAmount(amount uint64) {
+func (i *Invoice) SetAmount(amount int64) {
 	i.Amount = amount
 }
-func (i *Invoice) GetAmount() uint64 {
+func (i *Invoice) GetAmount() int64 {
 	return i.Amount
 }
 func (i *Invoice) IsIssued() bool {

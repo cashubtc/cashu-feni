@@ -29,7 +29,7 @@ func Test_amountSplit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := amountSplit(tt.args.amount); !reflect.DeepEqual(got, tt.want) {
+			if got := AmountSplit(tt.args.amount); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("amountSplit() = %v, want %v", got, tt.want)
 			}
 		})
@@ -133,7 +133,7 @@ func TestMint_RequestMint(t *testing.T) {
 			if got.GetHash() == "" {
 				t.Errorf("RequestMint() got = %v, want %v", got, tt.want)
 			}
-			if got.GetAmount() != tt.args.amount {
+			if got.GetAmount() != int64(tt.args.amount) {
 				t.Errorf("RequestMint() got = %v, want %v", got, tt.want)
 			}
 		})
@@ -151,7 +151,7 @@ func Test_verifyAmount(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "verifyAmount", want: 123, args: args{amount: 123}},
-		{name: "verifyAmountMax", want: uint64(math.Pow(2, MaxOrder)), args: args{amount: uint64(math.Pow(2, MaxOrder))}},
+		{name: "verifyAmountMax", want: uint64(math.Pow(2, crypto.MaxOrder)), args: args{amount: uint64(math.Pow(2, crypto.MaxOrder))}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

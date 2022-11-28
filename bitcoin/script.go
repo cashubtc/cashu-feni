@@ -1,11 +1,14 @@
 package bitcoin
 
 import (
+	"fmt"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/lightningnetwork/lnd/input"
 )
 
@@ -13,6 +16,21 @@ const (
 	TXID = "bff785da9f8169f49be92fa95e31f0890c385bfb1bd24d6b94d7900057c617ae"
 	COIN = 100_000_000
 )
+
+func Step0CarolPrivateKey() *secp256k1.PrivateKey {
+	key, err := btcec.NewPrivateKey()
+	if err != nil {
+		return nil
+	}
+	return key
+}
+func Step0CarolCheckSigRedeemScript(C_ secp256k1.PublicKey) []byte {
+	TxInRedeemScript, err := txscript.NewScriptBuilder().AddData(C_.SerializeCompressed()).AddOp(txscript.OP_CHECKSIG).Script()
+	if err != nil {
+		return nil
+	}
+	return TxInRedeemScript
+}
 
 /*
 step1_carol_create_p2sh_address
@@ -50,11 +68,35 @@ func Step1BobCarolCreateTx(txInP2SHAddress []byte) (*wire.MsgTx, error) {
 	return tx, nil
 
 }
+
+func Step2CarolSignTx(txInRedeemScript []byte, privateKey *btcec.PrivateKey) (*wire.TxIn, error) {
+	txInP2SHAddress, err := Step1CarolCreateP2SHAddress(txInRedeemScript)
+	if err != nil {
+		return nil, err
+	}
+	tx, err := Step1BobCarolCreateTx(txInP2SHAddress.ScriptAddress())
+	if err != nil {
+		return nil, err
+	}
+	sig, err := txscript.RawTxInSignature(tx, 0, txInRedeemScript, txscript.SigHashAll, privateKey)
+	if err != nil {
+		return nil, err
+	}
+	// sig script
+	signatureScript, err := txscript.NewScriptBuilder().AddData(sig).AddData(txInRedeemScript).Script()
+	if err != nil {
+		return nil, err
+	}
+	tx.TxIn[0].SignatureScript = signatureScript
+	return tx.TxIn[0], nil
+
+}
 func Step3BobVerifyScript(txInSignature, txInRedeemScript []byte, tx *wire.MsgTx) error {
 	txInScriptPubKey, err := input.GenerateP2SH(txInRedeemScript)
 	if err != nil {
 		return err
 	}
+	fmt.Println(txInRedeemScript)
 	// set the received signature script
 	tx.TxIn[0].SignatureScript = txInSignature
 	if txscript.IsPayToScriptHash(txInScriptPubKey) {

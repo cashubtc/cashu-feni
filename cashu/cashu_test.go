@@ -5,10 +5,43 @@ import (
 	"fmt"
 	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/gohumble/cashu-feni/lightning/lnbits"
+	cashuLog "github.com/gohumble/cashu-feni/log"
+	"github.com/google/uuid"
 	"reflect"
 	"testing"
 	"time"
 )
+
+func TestToJson(t *testing.T) {
+	type args struct {
+		i interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{name: "json", args: args{i: &struct {
+			Test    string `json:"test"`
+			Integer int    `json:"integer"`
+		}{Integer: 1, Test: "cashu"}}, want: `{"test":"cashu","integer":1}`},
+		{name: "annotate", args: args{i: &struct {
+			Test    string
+			Integer int
+		}{Integer: 1, Test: "cashu"}}, want: `{"Test":"cashu","Integer":1}`},
+		{name: "error", args: args{i: ErrorResponse{
+			Err:  "exception",
+			Code: 200,
+		}}, want: `{"error":"exception","code":200}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := cashuLog.ToJson(tt.args.i); got != tt.want {
+				t.Errorf("ToJson() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestWithCode(t *testing.T) {
 	type args struct {
@@ -158,11 +191,11 @@ func TestProof_Decode(t *testing.T) {
 				Amount:       tt.fields.Amount,
 				Secret:       tt.fields.Secret,
 				C:            tt.fields.C,
-				reserved:     tt.fields.reserved,
+				Reserved:     tt.fields.reserved,
 				Script:       tt.fields.Script,
-				sendId:       tt.fields.sendId,
-				timeCreated:  tt.fields.timeCreated,
-				timeReserved: tt.fields.timeReserved,
+				SendId:       uuid.New(),
+				TimeCreated:  tt.fields.timeCreated,
+				TimeReserved: tt.fields.timeReserved,
 			}
 			got, err := p.Decode()
 			if (err != nil) != tt.wantErr {
@@ -220,7 +253,7 @@ func TestProof_Log(t *testing.T) {
 		fields fields
 		want   map[string]interface{}
 	}{
-		{name: "proofLog", want: map[string]interface{}{"Id": "1234a", "Secret": "1", "C": "1234", "Amount": uint64(1)},
+		{name: "proofLog", want: map[string]interface{}{"Id": "1234a", "Amount": uint64(1), "Secret": "1", "C": "1234", "Reserved": false},
 			fields: fields{Amount: 1, C: "1234", Id: "1234a", Secret: "1", Script: nil}},
 	}
 	for _, tt := range tests {
@@ -230,11 +263,10 @@ func TestProof_Log(t *testing.T) {
 				Amount:       tt.fields.Amount,
 				Secret:       tt.fields.Secret,
 				C:            tt.fields.C,
-				reserved:     tt.fields.reserved,
+				Reserved:     tt.fields.reserved,
 				Script:       tt.fields.Script,
-				sendId:       tt.fields.sendId,
-				timeCreated:  tt.fields.timeCreated,
-				timeReserved: tt.fields.timeReserved,
+				TimeCreated:  tt.fields.timeCreated,
+				TimeReserved: tt.fields.timeReserved,
 			}
 			if got := p.Log(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Log() = %v, want %v", got, tt.want)

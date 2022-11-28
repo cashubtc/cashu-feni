@@ -12,7 +12,8 @@ type Api struct {
 	Mint       *mint.Mint
 }
 
-type MintResponse cashu.BlindedMessages
+type MintResponse []cashu.BlindedSignature
+
 type MintRequest struct {
 	BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
 }
@@ -23,8 +24,8 @@ type MeltResponse struct {
 type GetKeysResponse map[int]string
 type CheckResponse map[string]bool
 type SplitResponse struct {
-	Fst string
-	Snd string
+	Fst []cashu.BlindedSignature `json:"fst"`
+	Snd []cashu.BlindedSignature `json:"snd"`
 }
 type GetKeySetsResponse struct {
 	KeySets []string `json:"keysets"`
@@ -35,12 +36,11 @@ type GetMintResponse struct {
 }
 
 type MeltRequest struct {
-	Proofs  cashu.Proofs
-	Amount  uint64
-	Invoice string
+	Proofs  cashu.Proofs `json:"proofs"`
+	Invoice string       `json:"invoice"`
 }
 type CheckRequest struct {
-	Proofs cashu.Proofs
+	Proofs cashu.Proofs `json:"proofs"`
 }
 
 type CheckFeesResponse struct {
@@ -54,10 +54,10 @@ type SplitRequest struct {
 	Amount  uint64       `json:"amount"`
 	Outputs struct {
 		BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
-	} `json:"outputs"`
+	} `json:"outputs,omitempty"`
 	// todo -- remove output data in future version. This is only used for backward compatibility
 	// check https://github.com/callebtc/cashu/pull/20
-	OutputData struct {
+	OutputData *struct {
 		BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
-	} `json:"output_data" swaggerignore:"true"`
+	} `json:"output_data,omitempty" swaggerignore:"true"`
 }
