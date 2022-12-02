@@ -8,6 +8,7 @@ mint:
   host: 0.0.0.0
   port: 3338
   private_key: veryverysecretkey
+  derivation_path: 0/0/0/0
   tls:
     enabled: false
     key_path: /home/tls.key
