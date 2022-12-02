@@ -46,7 +46,7 @@ Please install the cashu client using ```pip install cashu```
 ### Building
 
 ```bash 
-git clone https://github.com/gohumble/cashu-feni && cd cashu-feni
+git clone https://github.com/cashubtc/cashu-feni && cd cashu-feni
 ```
 
 Copy `config_example.yaml` to `config.yaml` and update configuration values
@@ -57,16 +57,20 @@ go build . && ./cashu-feni
 
 ## Download
 
-Download the latest binary from [releases](https://github.com/gohumble/cashu-feni/releases)
+Download the latest binary from [releases](https://github.com/cashubtc/cashu-feni/releases)
 
 ## Using Docker
 
 Start cashu-feni using docker. Please provide a local volume path to the data folder.
 
+```bash 
+docker pull cashubtc/cashu-feni
+```
+
 ```bash
 docker run -it -p 3338:3338 \
 -v $(pwd)/data/:/app/data/ \
-gohumble/cashu-feni
+cashubtc/cashu-feni
 ```
 
 Mounting custom `config.yaml` to `/app/config.yaml`
@@ -75,12 +79,12 @@ Mounting custom `config.yaml` to `/app/config.yaml`
 docker run -it -p 3338:3338 \
 -v $(pwd)/config.yaml:/app/config.yaml \
 -v $(pwd)/data/:/app/data/ \
-gohumble/cashu-feni
+cashubtc/cashu-feni
 ```
 
 ### Build image
 
 ```bash 
-git clone https://github.com/gohumble/cashu-feni && cd cashu-feni
+git clone https://github.com/cashubtc/cashu-feni && cd cashu-feni
 docker build -t cashu -f Dockerfile .
 ```
