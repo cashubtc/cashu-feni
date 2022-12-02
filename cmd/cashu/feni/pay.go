@@ -2,7 +2,7 @@ package feni
 
 import (
 	"fmt"
-	"github.com/gohumble/cashu-feni/api"
+	"github.com/cashubtc/cashu-feni/api"
 	decodepay "github.com/nbd-wtf/ln-decodepay"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

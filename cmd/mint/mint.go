@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/gohumble/cashu-feni/api"
-	_ "github.com/gohumble/cashu-feni/docs"
-	"github.com/gohumble/cashu-feni/log"
+	"github.com/cashubtc/cashu-feni/api"
+	_ "github.com/cashubtc/cashu-feni/docs"
+	"github.com/cashubtc/cashu-feni/log"
 	log "github.com/sirupsen/logrus"
 )
 

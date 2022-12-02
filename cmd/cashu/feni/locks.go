@@ -3,7 +3,7 @@ package feni
 import (
 	"fmt"
 	"github.com/c-bata/go-prompt"
-	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/spf13/cobra"
 )
 

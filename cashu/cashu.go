@@ -2,9 +2,9 @@ package cashu
 
 import (
 	"encoding/hex"
-	"github.com/gohumble/cashu-feni/lightning"
-	"github.com/gohumble/cashu-feni/lightning/lnbits"
-	cashuLog "github.com/gohumble/cashu-feni/log"
+	"github.com/cashubtc/cashu-feni/lightning"
+	"github.com/cashubtc/cashu-feni/lightning/lnbits"
+	cashuLog "github.com/cashubtc/cashu-feni/log"
 	"github.com/google/uuid"
 	"strings"
 	"time"

@@ -2,7 +2,7 @@ package lnbits
 
 import (
 	"fmt"
-	"github.com/gohumble/cashu-feni/lightning"
+	"github.com/cashubtc/cashu-feni/lightning"
 	"time"
 
 	"github.com/imroc/req"

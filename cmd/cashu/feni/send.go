@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/spf13/cobra"
 	"strconv"
 )

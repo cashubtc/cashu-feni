@@ -3,8 +3,8 @@ package feni
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/gohumble/cashu-feni/bitcoin"
-	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/bitcoin"
+	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/spf13/cobra"
 )
 

@@ -2,10 +2,10 @@ package db
 
 import (
 	"errors"
-	"github.com/gohumble/cashu-feni/cashu"
-	"github.com/gohumble/cashu-feni/lightning"
-	"github.com/gohumble/cashu-feni/lightning/lnbits"
-	cashuLog "github.com/gohumble/cashu-feni/log"
+	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/lightning"
+	"github.com/cashubtc/cashu-feni/lightning/lnbits"
+	cashuLog "github.com/cashubtc/cashu-feni/log"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

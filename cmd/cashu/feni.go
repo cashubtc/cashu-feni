@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/c-bata/go-prompt"
-	"github.com/gohumble/cashu-feni/cmd/cashu/feni"
+	"github.com/cashubtc/cashu-feni/cmd/cashu/feni"
 	"os"
 	"strings"
 )

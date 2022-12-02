@@ -3,10 +3,10 @@ package feni
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/cashubtc/cashu-feni/api"
+	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/gohumble/cashu-feni/api"
-	"github.com/gohumble/cashu-feni/cashu"
-	"github.com/gohumble/cashu-feni/lightning"
 	"github.com/imroc/req"
 	"time"
 )

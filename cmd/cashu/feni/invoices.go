@@ -2,7 +2,7 @@ package feni
 
 import (
 	"fmt"
-	"github.com/gohumble/cashu-feni/lightning/lnbits"
+	"github.com/cashubtc/cashu-feni/lightning/lnbits"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

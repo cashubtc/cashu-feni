@@ -3,10 +3,10 @@ package feni
 import (
 	"fmt"
 	"github.com/caarlos0/env/v6"
+	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/crypto"
+	"github.com/cashubtc/cashu-feni/db"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/gohumble/cashu-feni/cashu"
-	"github.com/gohumble/cashu-feni/crypto"
-	"github.com/gohumble/cashu-feni/db"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 	"math/rand"

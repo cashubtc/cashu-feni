@@ -1,8 +1,8 @@
 package api
 
 import (
-	"github.com/gohumble/cashu-feni/cashu"
-	"github.com/gohumble/cashu-feni/mint"
+	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/mint"
 	"net/http"
 )
 

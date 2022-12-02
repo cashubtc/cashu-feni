@@ -3,7 +3,7 @@ package feni
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/gohumble/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/cashu"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"strings"

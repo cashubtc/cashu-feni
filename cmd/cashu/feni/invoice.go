@@ -2,11 +2,11 @@ package feni
 
 import (
 	"fmt"
-	"github.com/gohumble/cashu-feni/api"
-	"github.com/gohumble/cashu-feni/cashu"
-	"github.com/gohumble/cashu-feni/db"
-	"github.com/gohumble/cashu-feni/lightning"
-	"github.com/gohumble/cashu-feni/mint"
+	"github.com/cashubtc/cashu-feni/api"
+	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/db"
+	"github.com/cashubtc/cashu-feni/lightning"
+	"github.com/cashubtc/cashu-feni/mint"
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

@@ -2,7 +2,7 @@ package lightning
 
 import (
 	"fmt"
-	cashuLog "github.com/gohumble/cashu-feni/log"
+	cashuLog "github.com/cashubtc/cashu-feni/log"
 	"time"
 )
 
