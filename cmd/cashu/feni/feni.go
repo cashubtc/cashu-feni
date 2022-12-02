@@ -40,16 +40,14 @@ var GetWalletsDynamic = func(annotationValue string) []prompt.Suggest {
 
 func PreRunFeni(cmd *cobra.Command, args []string) {
 	// Do not initialize default wallet again
-	if WalletUsed != "wallet" {
-		InitializeDatabase(WalletUsed)
+	InitializeDatabase(WalletUsed)
+	if storage != nil {
+		var err error
+		Wallet.proofs, err = storage.GetUsedProofs()
+		if err != nil {
+			panic(err)
+		}
 	}
-	var err error
-
-	Wallet.proofs, err = storage.GetUsedProofs()
-	if err != nil {
-		panic(err)
-	}
-
 }
 
 var RootCmd = &cobra.Command{

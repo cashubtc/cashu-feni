@@ -11,7 +11,7 @@ import (
 
 type Configuration struct {
 	Database struct {
-		MySql  *MySqlConfig
+		MySql  *MySqlConfig  `json:"mySql" yaml:"mySql"`
 		Sqlite *SqliteConfig `json:"sqlite" yaml:"sqlite"`
 	} `json:"database" yaml:"database"`
 }

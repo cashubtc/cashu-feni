@@ -30,8 +30,8 @@ func defaultConfig() {
 	Config = WalletConfig{
 		Debug:          true,
 		Lightning:      false,
-		MintServerHost: "localhost",
-		MintServerPort: "3338",
+		MintServerHost: "https://8333.space",
+		MintServerPort: "3339",
 		Wallet:         "wallet",
 	}
 
