@@ -26,4 +26,4 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: gohumble/cashu-feni:latest
+          tags: cashubtc/cashu-feni:latest

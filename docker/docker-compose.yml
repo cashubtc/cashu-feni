@@ -14,7 +14,7 @@ services:
     ports:
       - "3338:3338"
   cashu-lnbits:
-    image: "gohumble/lnbits:latest"
+    image: "cashubtc/lnbits:latest"
     restart: always
     hostname: lnbits.docker
     network_mode: bridge

@@ -1,10 +1,10 @@
 # cashu-feni
 
 [![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg)](https://go.dev/)
-[![GoReportCard example](https://goreportcard.com/badge/github.com/gohumble/cashu-feni)](https://goreportcard.com/report/github.com/gohumble/cashu-feni)
+[![GoReportCard example](https://goreportcard.com/badge/github.com/cashubtc/cashu-feni)](https://goreportcard.com/report/github.com/cashubtc/cashu-feni)
 [![Docker](https://badgen.net/badge/icon/docker?icon=docker&label)](https://https://docker.com/)
-[![Github tag](https://badgen.net/github/tag/gohumble/cashu-feni)](https://github.com/gohumble/cashu-feni/tags/)
-[![codecov](https://codecov.io/gh/gohumble/cashu-feni/branch/master/graph/badge.svg)](https://codecov.io/gh/gohumble/cashu-feni)
+[![Github tag](https://badgen.net/github/tag/cashubtc/cashu-feni)](https://github.com/cashubtc/cashu-feni/tags/)
+[![codecov](https://codecov.io/gh/cashubtc/cashu-feni/branch/master/graph/badge.svg)](https://codecov.io/gh/cashubtc/cashu-feni)
 
 <html>
 <simple-boost amount="2100" address="hello@getalby.com"></simple-boost>
