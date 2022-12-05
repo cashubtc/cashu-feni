@@ -1,13 +1,17 @@
 package feni
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"github.com/cashubtc/cashu-feni/api"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/lightning"
+	"github.com/cretz/bine/tor"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/imroc/req"
+	"github.com/sirupsen/logrus"
+	"net/http"
 	"time"
 )
 
@@ -15,7 +19,45 @@ type Client struct {
 	url string
 }
 
-var WalletClient *Client
+func NewFeniClient(ctx context.Context, url string) *Client {
+	if Config.Tor {
+		t, err := tor.Start(ctx, &tor.StartConf{})
+		if err != nil {
+			panic(err)
+		}
+		c := make(chan error)
+		go func(c chan error) {
+			fmt.Print("Starting tor client...")
+			for {
+				select {
+				case err := <-c:
+					if err != nil {
+						panic(fmt.Sprintf("error starting tor: %v", err))
+						return
+					}
+					fmt.Print("\n")
+					logrus.Info("sucessfully started tor")
+					return
+				default:
+					time.Sleep(time.Second)
+					fmt.Print(".")
+				}
+			}
+		}(c)
+		dialer, err := t.Dialer(ctx, &tor.DialConf{})
+		if err != nil {
+			c <- err
+			return nil
+		}
+		req.SetClient(&http.Client{Transport: &http.Transport{
+			DialContext: dialer.DialContext,
+		}})
+		c <- nil
+
+	}
+
+	return &Client{url: url}
+}
 
 func checkError(resp *req.Resp) error {
 	if resp.Response().StatusCode >= 300 {

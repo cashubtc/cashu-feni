@@ -42,7 +42,7 @@ func mintCmd(cmd *cobra.Command, args []string) {
 		}
 		if hash == "" {
 			var invoice lightning.Invoice
-			invoice, err = WalletClient.GetMint(int64(amount))
+			invoice, err = Wallet.client.GetMint(int64(amount))
 			if err != nil {
 				panic(err)
 			}
@@ -81,7 +81,7 @@ func mintCmd(cmd *cobra.Command, args []string) {
 }
 
 func invalidate(proofs []cashu.Proof) error {
-	resp, err := WalletClient.Check(api.CheckRequest{Proofs: proofs})
+	resp, err := Wallet.client.Check(api.CheckRequest{Proofs: proofs})
 	if err != nil {
 		return err
 	}

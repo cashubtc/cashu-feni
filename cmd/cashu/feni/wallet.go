@@ -37,6 +37,7 @@ type MintWallet struct {
 	keys   map[uint64]*secp256k1.PublicKey // current public keys from mint server
 	keySet string                          // current keySet id from mint server.
 	proofs []cashu.Proof
+	client *Client
 }
 
 var Wallet MintWallet
@@ -102,7 +103,7 @@ func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 		panic(err)
 	}
 	req, privateKeys := constructOutputs(amounts, secrets)
-	blindedSignatures, err := WalletClient.Mint(req, paymentHash)
+	blindedSignatures, err := w.client.Mint(req, paymentHash)
 	if err != nil {
 		panic(err)
 	}
@@ -191,7 +192,7 @@ func RandStringRunes(n int) string {
 }
 
 func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) error {
-	res, err := WalletClient.Melt(api.MeltRequest{Proofs: proofs, Invoice: invoice})
+	res, err := w.client.Melt(api.MeltRequest{Proofs: proofs, Invoice: invoice})
 	if err != nil {
 		return err
 	}
@@ -322,7 +323,7 @@ func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string
 	}
 	// TODO -- check used secrets(secrtes)
 	payloads, rs := constructOutputs(amounts, secrets)
-	response, err := WalletClient.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads})
+	response, err := w.client.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads})
 	if err != nil {
 		return nil, nil, err
 	}
