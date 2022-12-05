@@ -83,7 +83,7 @@ func Use(h http.HandlerFunc, middleware ...func(http.HandlerFunc) http.HandlerFu
 // LoggingMiddleware will log all incoming requests
 func LoggingMiddleware(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.WithFields(log.Fields{"resource": r.URL.String()}).Infof("incoming request")
+		log.WithFields(log.Fields{"resource": r.URL.String(), "ip": r.RemoteAddr}).Infof("incoming request")
 		h.ServeHTTP(w, r)
 	}
 }
