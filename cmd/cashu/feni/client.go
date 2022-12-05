@@ -1,7 +1,6 @@
 package feni
 
 import (
-	"berty.tech/go-libtor"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"github.com/cretz/bine/tor"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/imroc/req"
+	"github.com/ipsn/go-libtor"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
