@@ -31,7 +31,7 @@ func defaultConfig() {
 	log.Infof("Loading default configuration")
 	Config = WalletConfig{
 		Debug:          true,
-		Lightning:      false,
+		Lightning:      true,
 		MintServerHost: "https://8333.space",
 		MintServerPort: "3339",
 		Wallet:         "wallet",

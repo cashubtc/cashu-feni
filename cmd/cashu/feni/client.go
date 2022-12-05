@@ -1,6 +1,7 @@
 package feni
 
 import (
+	"berty.tech/go-libtor"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -21,7 +22,7 @@ type Client struct {
 
 func NewFeniClient(ctx context.Context, url string) *Client {
 	if Config.Tor {
-		t, err := tor.Start(ctx, &tor.StartConf{})
+		t, err := tor.Start(ctx, &tor.StartConf{ProcessCreator: libtor.Creator})
 		if err != nil {
 			panic(err)
 		}
