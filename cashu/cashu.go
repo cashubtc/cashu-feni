@@ -16,11 +16,20 @@ type ProofsUsed struct {
 	C        string `json:"C"`
 	TimeUsed time.Time
 }
+type ProofStatus int
+
+const (
+	ProofStatusSpent ProofStatus = iota
+	ProofStatusPending
+	ProofStatusReserved
+)
+
 type Proof struct {
 	Id           string      `json:"id"`
 	Amount       uint64      `json:"amount"`
 	Secret       string      `json:"secret" gorm:"primaryKey"`
 	C            string      `json:"C"`
+	Status       ProofStatus `json:"status"`
 	Reserved     bool        `json:"reserved,omitempty"`
 	Script       *P2SHScript `gorm:"-" json:"script,omitempty" structs:"Script,omitempty"`
 	SendId       uuid.UUID   `json:"-,omitempty" structs:"SendId,omitempty"`
@@ -99,11 +108,8 @@ func (e ErrorResponse) Error() string {
 }
 
 // CreateInvoice will generate a blank invoice
-func CreateInvoice() lightning.Invoice {
-	if !lightning.Config.Lightning.Enabled {
-		return nil
-	}
-	if lightning.Config.Lightning.Lnbits != nil {
+func CreateInvoice() lightning.Invoicer {
+	if lightning.Config.Lightning.Enabled {
 		return lnbits.NewInvoice()
 	}
 	return nil

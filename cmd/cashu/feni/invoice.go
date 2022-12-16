@@ -41,7 +41,7 @@ func mintCmd(cmd *cobra.Command, args []string) {
 			return
 		}
 		if hash == "" {
-			var invoice lightning.Invoice
+			var invoice lightning.Invoicer
 			invoice, err = WalletClient.GetMint(int64(amount))
 			if err != nil {
 				panic(err)

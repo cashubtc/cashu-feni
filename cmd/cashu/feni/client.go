@@ -121,7 +121,7 @@ func (c Client) Mint(data api.MintRequest, paymentHash string) (*api.MintRespons
 	err = resp.ToJSON(&mint)
 	return &mint, nil
 }
-func (c Client) GetMint(amount int64) (lightning.Invoice, error) {
+func (c Client) GetMint(amount int64) (lightning.Invoicer, error) {
 	resp, err := req.Get(fmt.Sprintf("%s/mint?amount=%d", c.url, amount))
 	if err != nil {
 		return nil, err

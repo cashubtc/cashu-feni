@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/lightning"
-	"github.com/cashubtc/cashu-feni/lightning/lnbits"
+	"github.com/cashubtc/cashu-feni/lightning/invoice"
 	cashuLog "github.com/cashubtc/cashu-feni/log"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
@@ -116,21 +116,21 @@ func (s SqlDatabase) StorePromise(p cashu.Promise) error {
 }
 
 // StoreLightningInvoice will store lightning invoice in db
-func (s SqlDatabase) StoreLightningInvoice(i lightning.Invoice) error {
+func (s SqlDatabase) StoreLightningInvoice(i lightning.Invoicer) error {
 	log.WithFields(i.Log()).Info("storing lightning invoice")
 	return s.db.Create(i).Error
 }
 
 // GetLightningInvoices
-func (s SqlDatabase) GetLightningInvoices(paid bool) ([]lnbits.Invoice, error) {
-	invoices := make([]lnbits.Invoice, 0)
+func (s SqlDatabase) GetLightningInvoices(paid bool) ([]invoice.Invoice, error) {
+	invoices := make([]invoice.Invoice, 0)
 	var tx = s.db.Where("paid = ?", paid)
 	tx = tx.Find(&invoices)
 	return invoices, tx.Error
 }
 
 // GetLightningInvoice reads lighting invoice from db
-func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoice, error) {
+func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoicer, error) {
 	invoice := cashu.CreateInvoice()
 	invoice.SetHash(hash)
 	tx := s.db.Find(invoice)

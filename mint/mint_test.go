@@ -6,7 +6,7 @@ import (
 	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/db"
 	"github.com/cashubtc/cashu-feni/lightning"
-	"github.com/cashubtc/cashu-feni/lightning/lnbits"
+	"github.com/cashubtc/cashu-feni/lightning/invoice"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"math"
 	"os"
@@ -116,10 +116,10 @@ func TestMint_RequestMint(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    lightning.Invoice
+		want    lightning.Invoicer
 		wantErr bool
 	}{
-		{name: "request_mint", args: args{amount: 10}, wantErr: false, want: &lnbits.Invoice{Amount: 10, Hash: "invalid"}},
+		{name: "request_mint", args: args{amount: 10}, wantErr: false, want: &invoice.Invoice{Amount: 10, Hash: "invalid"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -240,12 +240,14 @@ func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 // @Param MeltRequest body MeltRequest true "Model containing proofs to melt"
 // @Tags POST
 func (api Api) melt(w http.ResponseWriter, r *http.Request) {
+
 	payload := MeltRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&payload)
 	if err != nil {
 		panic(err)
 	}
+
 	payment, err := api.Mint.Melt(payload.Proofs, payload.Invoice)
 	if err != nil {
 		log.WithFields(log.Fields{"error.message": err.Error()}).Errorf("error in melt")
@@ -335,6 +337,7 @@ func (api Api) check(w http.ResponseWriter, r *http.Request) {
 // @Param SplitRequest body SplitRequest true "Model containing proofs to split"
 // @Tags POST
 func (api Api) split(w http.ResponseWriter, r *http.Request) {
+
 	payload := SplitRequest{}
 	buf, _ := io.ReadAll(r.Body)
 	body := io.NopCloser(bytes.NewBuffer(buf))

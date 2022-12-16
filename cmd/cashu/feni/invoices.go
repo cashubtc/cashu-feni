@@ -2,7 +2,7 @@ package feni
 
 import (
 	"fmt"
-	"github.com/cashubtc/cashu-feni/lightning/lnbits"
+	"github.com/cashubtc/cashu-feni/lightning/invoice"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -20,17 +20,17 @@ func init() {
 }
 
 func invoicesCmd(cmd *cobra.Command, args []string) {
-	invoices := make([]lnbits.Invoice, 0)
+	invoices := make([]invoice.Invoice, 0)
 	invoices, err := storage.GetLightningInvoices(false)
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, invoice := range invoices {
+	for _, iv := range invoices {
 		fmt.Println("--------------------------")
-		fmt.Printf("Paid: %t\n", invoice.IsIssued())
-		fmt.Printf("Incoming: %t\n", invoice.GetAmount() > 0)
-		fmt.Printf("Amount: %d\n", invoice.GetAmount())
-		fmt.Printf("Hash: %s\n", invoice.GetHash())
-		fmt.Printf("PR: %s\n", invoice.GetPaymentRequest())
+		fmt.Printf("Paid: %t\n", iv.IsIssued())
+		fmt.Printf("Incoming: %t\n", iv.GetAmount() > 0)
+		fmt.Printf("Amount: %d\n", iv.GetAmount())
+		fmt.Printf("Hash: %s\n", iv.GetHash())
+		fmt.Printf("PR: %s\n", iv.GetPaymentRequest())
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/db"
+	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
@@ -56,6 +57,7 @@ func init() {
 		return
 	}
 	// initialize the default wallet (no other option selected using -w)
+	lightning.Config.Lightning.Enabled = Config.Lightning
 	InitializeDatabase(Config.Wallet)
 
 	rand.Seed(time.Now().UnixNano())

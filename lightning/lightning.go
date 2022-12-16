@@ -11,8 +11,8 @@ import (
 // When using cashu as stand alone, this lightning interface could be provided by multiple lighting services like
 // LND, CLN, or any abstraction layer like LNBits.
 
-// Invoice should create a lightning invoice somewhere.
-type Invoice interface {
+// Invoicer should create a lightning invoice somewhere.
+type Invoicer interface {
 	cashuLog.Loggable
 	fmt.Stringer      // toJson
 	SetHash(h string) // set the payment hash
@@ -41,7 +41,7 @@ type Payment interface {
 
 // Client should be able to perform lightning services
 type Client interface {
-	InvoiceStatus(paymentHash string) (Payment, error)        // InvoiceStatus should return Payment information for a payment hash
-	Pay(paymentRequest string) (Invoice, error)               // Pay should pay the payment request.
-	CreateInvoice(amount int64, memo string) (Invoice, error) // CreateInvoice should create an invoice for given amount and memo
+	InvoiceStatus(paymentHash string) (Payment, error)         // InvoiceStatus should return Payment information for a payment hash
+	Pay(paymentRequest string) (Invoicer, error)               // Pay should pay the payment request.
+	CreateInvoice(amount int64, memo string) (Invoicer, error) // CreateInvoice should create an invoice for given amount and memo
 }

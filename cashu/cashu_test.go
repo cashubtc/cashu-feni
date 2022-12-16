@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/cashubtc/cashu-feni/lightning"
-	"github.com/cashubtc/cashu-feni/lightning/lnbits"
+	"github.com/cashubtc/cashu-feni/lightning/invoice"
 	cashuLog "github.com/cashubtc/cashu-feni/log"
 	"github.com/google/uuid"
 	"reflect"
@@ -140,10 +140,10 @@ func TestErrorResponse_Error(t *testing.T) {
 func TestCreateInvoice(t *testing.T) {
 	tests := []struct {
 		name string
-		want lightning.Invoice
+		want lightning.Invoicer
 	}{
 		{name: "createNoInvoice", want: nil},
-		{name: "createInvoice", want: &lnbits.Invoice{}},
+		{name: "createInvoice", want: &invoice.Invoice{}},
 		{name: "lightningOnly", want: nil},
 	}
 	for _, tt := range tests {

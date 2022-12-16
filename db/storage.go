@@ -3,7 +3,7 @@ package db
 import (
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/lightning"
-	"github.com/cashubtc/cashu-feni/lightning/lnbits"
+	"github.com/cashubtc/cashu-feni/lightning/invoice"
 	"time"
 )
 
@@ -17,28 +17,28 @@ type MintStorage interface {
 	StorePromise(p cashu.Promise) error
 	StoreScript(p cashu.P2SHScript) error
 	GetScripts(address string) ([]cashu.P2SHScript, error)
-	StoreLightningInvoice(i lightning.Invoice) error
-	GetLightningInvoice(hash string) (lightning.Invoice, error)
-	GetLightningInvoices(paid bool) ([]lnbits.Invoice, error) // todo -- the return type of this interface function must be of type lightning.Invoice
+	StoreLightningInvoice(i lightning.Invoicer) error
+	GetLightningInvoice(hash string) (lightning.Invoicer, error)
+	GetLightningInvoices(paid bool) ([]invoice.Invoice, error) // todo -- the return type of this interface function must be of type lightning.Invoicer
 	UpdateLightningInvoice(hash string, options ...UpdateInvoiceOptions) error
 
 	Migrate(interface{}) error
 }
 
 func UpdateInvoiceWithIssued(issued bool) UpdateInvoiceOptions {
-	return func(invoice lightning.Invoice) {
+	return func(invoice lightning.Invoicer) {
 		invoice.SetIssued(issued)
 	}
 }
 func UpdateInvoicePaid(paid bool) UpdateInvoiceOptions {
-	return func(invoice lightning.Invoice) {
+	return func(invoice lightning.Invoicer) {
 		invoice.SetPaid(paid)
 	}
 }
 func UpdateInvoiceTimePaid(t time.Time) UpdateInvoiceOptions {
-	return func(invoice lightning.Invoice) {
+	return func(invoice lightning.Invoicer) {
 		invoice.SetTimePaid(t)
 	}
 }
 
-type UpdateInvoiceOptions func(invoice lightning.Invoice)
+type UpdateInvoiceOptions func(invoice lightning.Invoicer)

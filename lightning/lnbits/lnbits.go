@@ -3,6 +3,7 @@ package lnbits
 import (
 	"fmt"
 	"github.com/cashubtc/cashu-feni/lightning"
+	"github.com/cashubtc/cashu-feni/lightning/invoice"
 	"time"
 
 	"github.com/imroc/req"
@@ -45,12 +46,12 @@ func (c Client) Status() (wtx Wallet, err error) {
 	return
 }
 
-func NewInvoice() lightning.Invoice {
-	return &Invoice{}
+func NewInvoice() lightning.Invoicer {
+	return &invoice.Invoice{}
 }
 
 // Invoice creates an invoice associated with this wallet.
-func (c *Client) CreateInvoice(amount int64, memo string) (lightning.Invoice, error) {
+func (c *Client) CreateInvoice(amount int64, memo string) (lightning.Invoicer, error) {
 	params := InvoiceParams{Amount: amount, Memo: memo}
 	resp, err := req.Post(c.url+"/api/v1/payments", c.header, req.BodyJSON(&params))
 	if err != nil {
@@ -66,17 +67,17 @@ func (c *Client) CreateInvoice(amount int64, memo string) (lightning.Invoice, er
 		err = reqErr
 		return nil, err
 	}
-	invoice := &Invoice{}
-	err = resp.ToJSON(invoice)
+	i := &invoice.Invoice{}
+	err = resp.ToJSON(i)
 	if err == nil {
-		invoice.SetAmount(params.Amount)
-		return invoice, nil
+		i.SetAmount(params.Amount)
+		return i, nil
 	}
 	return nil, err
 }
 
 // Pay pays a given invoice with funds from the wallet.
-func (c *Client) Pay(paymentRequest string) (wtx lightning.Invoice, err error) {
+func (c *Client) Pay(paymentRequest string) (wtx lightning.Invoicer, err error) {
 	r := req.New()
 	r.SetTimeout(time.Hour * 24)
 	params := PaymentParams{Out: true, Bolt11: paymentRequest}
@@ -84,7 +85,7 @@ func (c *Client) Pay(paymentRequest string) (wtx lightning.Invoice, err error) {
 	if err != nil {
 		return
 	}
-	invoice := Invoice{}
+	i := invoice.Invoice{}
 	if resp.Response().StatusCode >= 300 {
 		var reqErr Error
 		err = resp.ToJSON(&reqErr)
@@ -95,8 +96,8 @@ func (c *Client) Pay(paymentRequest string) (wtx lightning.Invoice, err error) {
 		return
 	}
 
-	err = resp.ToJSON(&invoice)
-	wtx = &invoice
+	err = resp.ToJSON(&i)
+	wtx = &i
 	return
 }
 

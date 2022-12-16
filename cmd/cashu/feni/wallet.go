@@ -41,19 +41,31 @@ type MintWallet struct {
 
 var Wallet MintWallet
 
+// constructOutputs takes in a slice of amounts and a slice of secrets, and
+// constructs a MintRequest with blinded messages and a slice of private keys
+// corresponding to the given amounts and secrets.
 func constructOutputs(amounts []uint64, secrets []string) (api.MintRequest, []*secp256k1.PrivateKey) {
+	// Create a new empty MintRequest with a slice of blinded messages.
 	payloads := api.MintRequest{BlindedMessages: make(cashu.BlindedMessages, 0)}
+	// Create an empty slice of private keys.
 	privateKeys := make([]*secp256k1.PrivateKey, 0)
+	// For each pair of amount and secret in the input slices,
 	for _, pair := range Zip[string, uint64](secrets, amounts) {
+		// Generate a private key.
 		r, err := secp256k1.GeneratePrivateKey()
 		if err != nil {
+			// If there is an error generating the private key, panic.
 			panic(err)
 		}
+		// Compute the first step of the two-step blind signature protocol using the given secret and private key.
 		pub, r := crypto.FirstStepAlice(pair.First, r)
+		// Append the private key to the slice of private keys.
 		privateKeys = append(privateKeys, r)
+		// Append a new blinded message to the MintRequest using the given amount and the computed public key.
 		payloads.BlindedMessages = append(payloads.BlindedMessages,
 			cashu.BlindedMessage{Amount: pair.Second, B_: fmt.Sprintf("%x", pub.SerializeCompressed())})
 	}
+	// Return the MintRequest and the slice of private keys.
 	return payloads, privateKeys
 }
 

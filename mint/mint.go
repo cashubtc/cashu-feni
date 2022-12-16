@@ -43,8 +43,6 @@ func New(masterKey string, opt ...Options) *Mint {
 		masterKey:  masterKey,
 		proofsUsed: make([]string, 0),
 		keySets:    make(map[string]*crypto.KeySet, 0),
-		//privateKeys: make(map[int64]*secp256k1.PrivateKey),
-		//publicKeys:  make(map[int64]*secp256k1.PublicKey),
 	}
 	// apply ledger options
 	for _, o := range opt {
@@ -62,6 +60,19 @@ func New(masterKey string, opt ...Options) *Mint {
 	}
 
 	return l
+}
+func (m Mint) setProofsPending(proofs []cashu.Proof) error {
+	for _, proof := range proofs {
+		proof.Status = cashu.ProofStatusPending
+		err := m.database.StoreProof(proof)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (m Mint) unsetProofsPending(proofs []cashu.Proof) {
+	m.database.GetUsedProofs()
 }
 func (m Mint) LoadKeySet(id string) *crypto.KeySet {
 	return m.keySets[id]
@@ -110,7 +121,7 @@ func (m Mint) GetKeySet() []string {
 }
 
 // requestMint will create and return the lightning invoice for a mint
-func (m *Mint) RequestMint(amount uint64) (lightning.Invoice, error) {
+func (m *Mint) RequestMint(amount uint64) (lightning.Invoicer, error) {
 	// signed amount is int64 (arm intel compatibility)
 	signedAmount := int64(amount)
 	if m.client == nil {
@@ -310,9 +321,7 @@ func verifyOutputs(total, amount uint64, outputs []cashu.BlindedMessage) (bool, 
 	}
 	return reflect.DeepEqual(given, expected), nil
 }
-
-// verifyNoDuplicates checks if there are any duplicates
-func verifyNoDuplicates(proofs []cashu.Proof, outputs []cashu.BlindedMessage) bool {
+func verifyNoDuplicateProofs(proofs []cashu.Proof) bool {
 	secrets := make([]string, 0)
 	for _, proof := range proofs {
 		secrets = append(secrets, proof.Secret)
@@ -324,6 +333,11 @@ func verifyNoDuplicates(proofs []cashu.Proof, outputs []cashu.BlindedMessage) bo
 	if len(secrets) != len(secretUniqueMap) {
 		return false
 	}
+	return true
+}
+
+// verifyNoDuplicates checks if there are any duplicates
+func verifyNoDuplicateOutputs(outputs []cashu.BlindedMessage) bool {
 	B_s := make([]string, 0)
 	for _, datum := range outputs {
 		B_s = append(B_s, datum.B_)
@@ -527,10 +541,12 @@ func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.Blinde
 		return nil, nil, fmt.Errorf("no secret in proof.")
 	}
 	// check for duplicates
-	if !verifyNoDuplicates(proofs, outputs) {
-		return nil, nil, fmt.Errorf("duplicate proofs or promises.")
+	if !verifyNoDuplicateProofs(proofs) {
+		return nil, nil, fmt.Errorf("duplicate proofs.")
 	}
-
+	if !verifyNoDuplicateOutputs(outputs) {
+		return nil, nil, fmt.Errorf("duplicate outputs.")
+	}
 	// verify proofs
 	for _, proof := range proofs {
 		err := m.verifyProof(proof)
@@ -595,10 +611,14 @@ func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.Blinde
 	return fstPromise, sendPromise, nil
 }
 
+// verifySecretCriteria verifies that a secret is present and is not too long (DOS prevention).
 func verifySecretCriteria(proofs []cashu.Proof) error {
 	for _, proof := range proofs {
 		if proof.Secret == "" {
 			return fmt.Errorf("secrets do not match criteria.")
+		}
+		if len(proof.Secret) > 64 {
+			return fmt.Errorf("secret too long.")
 		}
 	}
 	return nil
