@@ -144,7 +144,7 @@ func TestCreateInvoice(t *testing.T) {
 	}{
 		{name: "createNoInvoice", want: nil},
 		{name: "createInvoice", want: &invoice.Invoice{}},
-		{name: "lightningOnly", want: nil},
+		{name: "lightningOnly", want: &invoice.Invoice{}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -245,6 +245,7 @@ func TestProof_Log(t *testing.T) {
 		reserved     bool
 		Script       *P2SHScript
 		sendId       string
+		status       ProofStatus
 		timeCreated  time.Time
 		timeReserved time.Time
 	}
@@ -253,8 +254,8 @@ func TestProof_Log(t *testing.T) {
 		fields fields
 		want   map[string]interface{}
 	}{
-		{name: "proofLog", want: map[string]interface{}{"Id": "1234a", "Amount": uint64(1), "Secret": "1", "C": "1234", "Reserved": false},
-			fields: fields{Amount: 1, C: "1234", Id: "1234a", Secret: "1", Script: nil}},
+		{name: "proofLog", want: map[string]interface{}{"Id": "1234a", "Amount": uint64(1), "Secret": "1", "C": "1234", "Reserved": false, "Status": ProofStatusPending},
+			fields: fields{Amount: 1, C: "1234", Id: "1234a", Secret: "1", Script: nil, status: ProofStatusPending}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -267,6 +268,7 @@ func TestProof_Log(t *testing.T) {
 				Script:       tt.fields.Script,
 				TimeCreated:  tt.fields.timeCreated,
 				TimeReserved: tt.fields.timeReserved,
+				Status:       tt.fields.status,
 			}
 			if got := p.Log(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Log() = %v, want %v", got, tt.want)
