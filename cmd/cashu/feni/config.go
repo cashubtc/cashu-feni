@@ -38,9 +38,8 @@ func defaultConfig() {
 
 }
 func init() {
-	WalletClient = &Client{
-		url: "http://0.0.0.0:3338",
-	}
+
+	WalletClient = NewClient()
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)

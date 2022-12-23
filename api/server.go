@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"github.com/cashubtc/cashu-feni/db"
 	"github.com/cashubtc/cashu-feni/mint"
 	"github.com/gorilla/mux"
+	"github.com/nbd-wtf/go-nostr"
 	log "github.com/sirupsen/logrus"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"io"
@@ -58,12 +60,58 @@ func New() *Api {
 			mint.WithStorage(sqlStorage),
 			mint.WithInitialKeySet(Config.Mint.DerivationPath),
 		),
+		Nostr: nostr.NewRelayPool(),
 	}
+	err = ConnectNostr(m.Nostr, []string{"ws://91.237.88.218:2700/"})
+	if err != nil {
+		panic(err)
+	}
+	//fmt.Println(<-m.Nostr.Add("ws://91.237.88.218:2700/", nostr.SimplePolicy{Read: true, Write: true}))
+	//fmt.Println(<-m.Nostr2.Add("wss://relay.damus.io", nostr.SimplePolicy{Read: true, Write: true}))
 
 	m.HttpServer.Handler = newRouter(m)
+	mintNostrPublicKey, err := nostr.GetPublicKey(*m.Nostr.SecretKey)
+	if err != nil {
+		panic(err)
+	}
+	log.WithField("publicKey", mintNostrPublicKey).Infof("Nostr public key")
+	SubscribeNostrEvents(m.Nostr, GetSubscriptionFilter(mintNostrPublicKey), m.nostrEventHandler)
+
 	log.Trace("created mint server")
 	return m
 }
+
+func (api Api) nostrEventHandler(message nostr.Event) {
+	secret, err := ComputeSharedSecret(*api.Nostr.SecretKey, message.PubKey)
+	if err != nil {
+		panic(err)
+	}
+	r, err := Decrypt(message.Content, secret)
+	if err != nil {
+		panic(err)
+	}
+	buf := &bytes.Buffer{}
+	buf.WriteString(r)
+	request, err := http.ReadRequest(bufio.NewReader(buf))
+	if err != nil {
+		panic(err)
+	}
+	request.RequestURI = ""
+	request.URL.Scheme = "http"
+	request.URL.Host = "localhost:3338"
+
+	c := http.Client{}
+	res, err := c.Do(request)
+	if err != nil {
+		panic(err)
+	}
+	response, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	PublishNostrEvents(string(response), message.PubKey, api.Nostr)
+}
+
 func responseError(w http.ResponseWriter, err cashu.ErrorResponse) {
 	log.WithFields(log.Fields{"error.message": err.Error(), "code": err.Code}).Error(err)
 	response := err.String()

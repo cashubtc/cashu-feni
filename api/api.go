@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/mint"
+	"github.com/nbd-wtf/go-nostr"
 	"net/http"
 )
 
@@ -10,6 +11,7 @@ import (
 type Api struct {
 	HttpServer *http.Server
 	Mint       *mint.Mint
+	Nostr      *nostr.RelayPool
 }
 
 type MintResponse []cashu.BlindedSignature

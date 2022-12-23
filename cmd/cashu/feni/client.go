@@ -1,6 +1,7 @@
 package feni
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"github.com/cashubtc/cashu-feni/api"
@@ -8,14 +9,81 @@ import (
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/imroc/req"
+	"github.com/nbd-wtf/go-nostr"
+	log "github.com/sirupsen/logrus"
+	"io"
+	"net/http"
+	"net/http/httputil"
+	"sync"
 	"time"
 )
 
 type Client struct {
-	url string
+	mintPublicKey   string
+	nostr           *nostr.RelayPool
+	url             string
+	clientPublicKey string
 }
 
 var WalletClient *Client
+
+func NewClient() *Client {
+	WalletClient = &Client{
+		nostr:         nostr.NewRelayPool(),
+		mintPublicKey: "2a4c4cce1523ffab2b727d6f0a0ce983dbe6868dde850ad65874961d62bca69d",
+	}
+	err := api.ConnectNostr(WalletClient.nostr, []string{"ws://91.237.88.218:2700/"})
+	if err != nil {
+		panic(err)
+	}
+	publicKey, err := nostr.GetPublicKey(*WalletClient.nostr.SecretKey)
+	if err != nil {
+		return nil
+	}
+	WalletClient.clientPublicKey = publicKey
+	req.SetClient(&http.Client{
+		Transport: WalletClient,
+	})
+	api.SubscribeNostrEvents(WalletClient.nostr, api.GetSubscriptionFilter(WalletClient.clientPublicKey), func(message nostr.Event) {
+		if message.Tags.ContainsAny("p", []string{WalletClient.clientPublicKey}) {
+			rs, err := api.ComputeSharedSecret(*WalletClient.nostr.SecretKey, message.PubKey)
+			if err != nil {
+				return
+			}
+			resp, err := api.Decrypt(message.Content, rs)
+			if err != nil {
+				return
+			}
+			response := http.Response{
+				Body:          io.NopCloser(bytes.NewBufferString(resp)),
+				Status:        "200 OK",
+				StatusCode:    200,
+				Proto:         "HTTP/1.1",
+				ProtoMajor:    1,
+				ProtoMinor:    1,
+				ContentLength: int64(len(message.Content)),
+				Request:       r,
+				Header:        make(http.Header, 0),
+			}
+			log.WithField("content", message.Content).Infof("received mint response")
+		}
+	})
+	return WalletClient
+}
+
+func (s *Client) RoundTrip(r *http.Request) (*http.Response, error) {
+	request, err := httputil.DumpRequestOut(r, true)
+	if err != nil {
+		return nil, err
+	}
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	var response http.Response
+
+	api.PublishNostrEvents(string(request), s.mintPublicKey, s.nostr)
+	wg.Wait()
+	return &response, nil
+}
 
 func checkError(resp *req.Resp) error {
 	if resp.Response().StatusCode >= 300 {
