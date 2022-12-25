@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/cashubtc/cashu-feni/lightning/invoice"
 	"time"
@@ -21,7 +22,8 @@ type MintStorage interface {
 	GetLightningInvoice(hash string) (lightning.Invoicer, error)
 	GetLightningInvoices(paid bool) ([]invoice.Invoice, error) // todo -- the return type of this interface function must be of type lightning.Invoicer
 	UpdateLightningInvoice(hash string, options ...UpdateInvoiceOptions) error
-
+	GetKeySet(id string) (crypto.KeySet, error)
+	StoreKeySet(k crypto.KeySet) error
 	Migrate(interface{}) error
 }
 

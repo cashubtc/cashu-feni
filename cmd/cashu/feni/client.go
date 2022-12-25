@@ -8,11 +8,12 @@ import (
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/imroc/req"
+	"strings"
 	"time"
 )
 
 type Client struct {
-	url string
+	Url string
 }
 
 var WalletClient *Client
@@ -29,8 +30,8 @@ func checkError(resp *req.Resp) error {
 	}
 	return nil
 }
-func (c Client) Keys() (map[uint64]*secp256k1.PublicKey, error) {
-	resp, err := req.Get(fmt.Sprintf("%s/keys", c.url))
+
+func parseKeys(resp *req.Resp, err error) (map[uint64]*secp256k1.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +54,16 @@ func (c Client) Keys() (map[uint64]*secp256k1.PublicKey, error) {
 	}
 	return keys, nil
 }
+func (c Client) Keys() (map[uint64]*secp256k1.PublicKey, error) {
+	return parseKeys(req.Get(fmt.Sprintf("%s/keys", c.Url)))
+}
+func (c Client) KeysForKeySet(kid string) (map[uint64]*secp256k1.PublicKey, error) {
+	kid = strings.ReplaceAll(strings.ReplaceAll(kid, "/", "_"), "+", "-")
+	return parseKeys(req.Get(fmt.Sprintf("%s/keys/%s", c.Url, kid)))
+}
 
 func (c Client) KeySets() (*api.GetKeySetsResponse, error) {
-	resp, err := req.Get(fmt.Sprintf("%s/keysets", c.url))
+	resp, err := req.Get(fmt.Sprintf("%s/keysets", c.Url))
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +76,7 @@ func (c Client) KeySets() (*api.GetKeySetsResponse, error) {
 }
 
 func (c Client) Check(data api.CheckRequest) (api.CheckResponse, error) {
-	resp, err := req.Post(fmt.Sprintf("%s/check", c.url), req.BodyJSON(data))
+	resp, err := req.Post(fmt.Sprintf("%s/check", c.Url), req.BodyJSON(data))
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +89,7 @@ func (c Client) Check(data api.CheckRequest) (api.CheckResponse, error) {
 }
 
 func (c Client) Split(data api.SplitRequest) (*api.SplitResponse, error) {
-	resp, err := req.Post(fmt.Sprintf("%s/split", c.url), req.BodyJSON(data))
+	resp, err := req.Post(fmt.Sprintf("%s/split", c.Url), req.BodyJSON(data))
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +101,7 @@ func (c Client) Split(data api.SplitRequest) (*api.SplitResponse, error) {
 	return &split, nil
 }
 func (c Client) Melt(data api.MeltRequest) (*api.MeltResponse, error) {
-	resp, err := req.Post(fmt.Sprintf("%s/melt", c.url), req.BodyJSON(data))
+	resp, err := req.Post(fmt.Sprintf("%s/melt", c.Url), req.BodyJSON(data))
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +114,7 @@ func (c Client) Melt(data api.MeltRequest) (*api.MeltResponse, error) {
 }
 
 func (c Client) Mint(data api.MintRequest, paymentHash string) (*api.MintResponse, error) {
-	requestUrl := fmt.Sprintf("%s/mint", c.url)
+	requestUrl := fmt.Sprintf("%s/mint", c.Url)
 	if paymentHash != "" {
 		requestUrl += fmt.Sprintf("?payment_hash=%s", paymentHash)
 	}
@@ -122,7 +130,7 @@ func (c Client) Mint(data api.MintRequest, paymentHash string) (*api.MintRespons
 	return &mint, nil
 }
 func (c Client) GetMint(amount int64) (lightning.Invoicer, error) {
-	resp, err := req.Get(fmt.Sprintf("%s/mint?amount=%d", c.url, amount))
+	resp, err := req.Get(fmt.Sprintf("%s/mint?amount=%d", c.Url, amount))
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +148,7 @@ func (c Client) GetMint(amount int64) (lightning.Invoicer, error) {
 }
 
 func (c Client) CheckFee(CheckFeesRequest api.CheckFeesRequest) (*api.CheckFeesResponse, error) {
-	resp, err := req.Post(fmt.Sprintf("%s/checkfees", c.url), req.BodyJSON(CheckFeesRequest))
+	resp, err := req.Post(fmt.Sprintf("%s/checkfees", c.Url), req.BodyJSON(CheckFeesRequest))
 	if err != nil {
 		return nil, err
 	}

@@ -23,6 +23,11 @@ var receiveCommand = &cobra.Command{
 	Run:    receive,
 }
 
+type Token struct {
+	Proofs []cashu.Proof                     `json:"tokens"`
+	Mints  map[string]map[string]interface{} `json:"mints"`
+}
+
 func receive(cmd *cobra.Command, args []string) {
 	var script, signature string
 	coin := args[0]
@@ -41,16 +46,16 @@ func receive(cmd *cobra.Command, args []string) {
 		script = p2shScripts[0].Script
 		signature = p2shScripts[0].Signature
 	}
-	proofs := make([]cashu.Proof, 0)
+	token := Token{Proofs: make([]cashu.Proof, 0)}
 	decodedCoin, err := base64.URLEncoding.DecodeString(coin)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = json.Unmarshal(decodedCoin, &proofs)
+	err = json.Unmarshal(decodedCoin, &token)
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, _, err = Wallet.redeem(proofs, script, signature)
+	_, _, err = Wallet.redeem(token.Proofs, script, signature)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -99,6 +100,7 @@ func newRouter(a *Api) *mux.Router {
 	router := mux.NewRouter()
 	// route to receive mint public keys
 	router.HandleFunc("/keys", Use(a.getKeys, LoggingMiddleware)).Methods(http.MethodGet)
+	router.HandleFunc("/keys/{id}", Use(a.getKeysByKeySet, LoggingMiddleware)).Methods(http.MethodGet)
 	router.HandleFunc("/keysets", Use(a.getKeySets, LoggingMiddleware)).Methods(http.MethodGet)
 	// route to get mint (create tokens)
 	router.HandleFunc("/mint", Use(a.getMint, LoggingMiddleware)).Methods(http.MethodGet)
@@ -119,7 +121,7 @@ func newRouter(a *Api) *mux.Router {
 // appendSwaggoHandler will append routes for the documentation to the router
 func appendSwaggoHandler(router *mux.Router) {
 	router.PathPrefix(ResourceSwaggerPathPrefix).Handler(httpSwagger.Handler(
-		httpSwagger.URL(Config.DocReference), //The url pointing to API definition"
+		httpSwagger.URL(Config.DocReference), //The url pointing to API definition
 	))
 }
 
@@ -279,6 +281,32 @@ func (api Api) getKeys(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
+	}
+	w.WriteHeader(200)
+	_, err = fmt.Fprintf(w, string(key))
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
+}
+
+// getKeys is the http handler function for GET /keys
+// @Summary Keys
+// @Description Get the public keys of the mint
+// @Produce  json
+// @Success 200 {object} GetKeysResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /keys/{keyset_id} [get]
+// @Tags GET
+func (api Api) getKeysByKeySet(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	keysetId := vars["id"]
+	keysetId = strings.ReplaceAll(strings.ReplaceAll(keysetId, "_", "/"), "-", "+")
+	key, err := json.Marshal(crypto.GetKeySetPublicKeys(api.Mint.LoadKeySet(keysetId)))
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+
 	}
 	w.WriteHeader(200)
 	_, err = fmt.Fprintf(w, string(key))
