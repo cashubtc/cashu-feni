@@ -39,7 +39,7 @@ func defaultConfig() {
 }
 func init() {
 	WalletClient = &Client{
-		url: "http://0.0.0.0:3338",
+		Url: "http://0.0.0.0:3338",
 	}
 	dirname, err := os.UserHomeDir()
 	if err != nil {
@@ -62,20 +62,61 @@ func init() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	Wallet = MintWallet{proofs: make([]cashu.Proof, 0), keys: make(map[uint64]*secp256k1.PublicKey)}
-	WalletClient = &Client{url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)}
-	mintServerPublickeys, err := WalletClient.Keys()
-	if err != nil {
-		panic(err)
-	}
-	Wallet.keys = mintServerPublickeys
-	keySet, err := WalletClient.KeySets()
-	if err != nil {
-		panic(err)
-	}
-	Wallet.keySet = keySet.KeySets[len(keySet.KeySets)-1]
-}
+	Wallet = MintWallet{proofs: make([]cashu.Proof, 0)}
+	WalletClient = &Client{Url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)}
 
+	loadMint()
+
+}
+func loadMint() {
+	activeKeys, err := WalletClient.Keys()
+	if err != nil {
+		panic(err)
+	}
+	keyset, _ := persistKeysSet(activeKeys)
+	Wallet.keySets = append(Wallet.keySets, keyset)
+
+	k, err := WalletClient.KeySets()
+	if err != nil {
+		panic(err)
+	}
+	for _, set := range k.KeySets {
+		if set == keyset.Id {
+			continue
+		}
+		err = checkAndPersistKeySet(set)
+		if err != nil {
+			panic(err)
+		}
+
+	}
+}
+func persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error) {
+	keySet := crypto.KeySet{MintUrl: WalletClient.Url, FirstSeen: time.Now(), PublicKeys: crypto.PublicKeyList{}}
+	keySet.SetPublicKeyList(keys)
+	keySet.DeriveKeySetId()
+	err := storage.StoreKeySet(keySet)
+	if err != nil {
+		return keySet, err
+	}
+	return keySet, nil
+}
+func checkAndPersistKeySet(id string) error {
+	var ks crypto.KeySet
+	var err error
+	if ks, err = storage.GetKeySet(id); err != nil {
+		keys, err := WalletClient.KeysForKeySet(id)
+		if err != nil {
+			return err
+		}
+		ks, err = persistKeysSet(keys)
+		if err != nil {
+			return err
+		}
+	}
+	Wallet.keySets = append(Wallet.keySets, ks)
+	return nil
+}
 func InitializeDatabase(wallet string) {
 	dirname, err := os.UserHomeDir()
 	if err != nil {

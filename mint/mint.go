@@ -27,14 +27,10 @@ type Mint struct {
 	proofsUsed []string
 	// masterKey used to derive mints private key
 	masterKey string
-	// privateKeys map of amount:privateKey
-	//privateKeys map[int64]*secp256k1.PrivateKey
-	// publicKeys map of amount:publicKey
-	//publicKeys map[int64]*secp256k1.PublicKey
-	keySets  map[string]*crypto.KeySet
-	KeySetId string
-	database db.MintStorage
-	client   lightning.Client
+	keySets   map[string]*crypto.KeySet
+	KeySetId  string
+	database  db.MintStorage
+	client    lightning.Client
 }
 
 // New creates a new ledger and derives keys
@@ -63,6 +59,9 @@ func New(masterKey string, opt ...Options) *Mint {
 }
 func (m Mint) setProofsPending(proofs []cashu.Proof) error {
 	for _, proof := range proofs {
+		if proof.Status == cashu.ProofStatusPending {
+			return fmt.Errorf("proofs already pending.")
+		}
 		proof.Status = cashu.ProofStatusPending
 		err := m.database.StoreProof(proof)
 		if err != nil {
@@ -452,11 +451,7 @@ func (m *Mint) invalidateProofs(proofs []cashu.Proof) error {
 
 // GetPublicKeys will return current public keys for all amounts
 func (m *Mint) GetPublicKeys() map[uint64]string {
-	ret := make(map[uint64]string, 0)
-	for _, key := range m.keySets[m.KeySetId].PublicKeys {
-		ret[key.Amount] = hex.EncodeToString(key.Key.SerializeCompressed())
-	}
-	return ret
+	return crypto.GetKeySetPublicKeys(m.keySets[m.KeySetId])
 }
 
 /*

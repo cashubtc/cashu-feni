@@ -34,9 +34,9 @@ func Zip[T, U any](ts []T, us []U) []Pair[T, U] {
 }
 
 type MintWallet struct {
-	keys   map[uint64]*secp256k1.PublicKey // current public keys from mint server
-	keySet string                          // current keySet id from mint server.
-	proofs []cashu.Proof
+	//	keys    map[uint64]*secp256k1.PublicKey // current public keys from mint server
+	keySets []crypto.KeySet // current keySet id from mint server.
+	proofs  []cashu.Proof
 }
 
 var Wallet MintWallet
@@ -118,7 +118,7 @@ func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 	if err != nil {
 		panic(err)
 	}
-	return w.constructProofs(*blindedSignatures, secrets, privateKeys)
+	return w.constructProofs(blindedSignatures.Promises, secrets, privateKeys)
 }
 
 func (w MintWallet) constructProofs(promises []cashu.BlindedSignature, secrets []string, privateKeys []*secp256k1.PrivateKey) []cashu.Proof {
@@ -132,9 +132,9 @@ func (w MintWallet) constructProofs(promises []cashu.BlindedSignature, secrets [
 		if err != nil {
 			return nil
 		}
-		C := crypto.ThirdStepAlice(*C_, *privateKeys[i], *w.keys[promise.Amount])
+		C := crypto.ThirdStepAlice(*C_, *privateKeys[i], *w.keySets[len(w.keySets)-1].PublicKeys.GetKeyByAmount(promise.Amount).Key)
 		proofs = append(proofs, cashu.Proof{
-			Id:     w.keySet,
+			Id:     w.keySets[len(w.keySets)-1].Id,
 			Amount: promise.Amount,
 			C:      fmt.Sprintf("%x", C.SerializeCompressed()),
 			Secret: secrets[i],
@@ -223,7 +223,7 @@ func (w MintWallet) GetSpendableProofs() []cashu.Proof {
 		if proof.Reserved {
 			continue
 		}
-		if proof.Id != w.keySet {
+		if proof.Id != w.keySets[len(w.keySets)-1].Id {
 			continue
 		}
 		spendable = append(spendable, proof)

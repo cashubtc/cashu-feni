@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/cashubtc/cashu-feni/lightning/invoice"
 	cashuLog "github.com/cashubtc/cashu-feni/log"
@@ -49,6 +50,10 @@ func open(dialector gorm.Dialector) *gorm.DB {
 	return orm
 }
 
+func (s SqlDatabase) StoreKeySet(k crypto.KeySet) error {
+	return s.db.Create(k).Error
+
+}
 func (s SqlDatabase) Migrate(object interface{}) error {
 	// do not migrate invoice, if lightning is not enabled
 	if object != nil {
@@ -58,6 +63,13 @@ func (s SqlDatabase) Migrate(object interface{}) error {
 		}
 	}
 	return nil
+}
+
+func (s SqlDatabase) GetKeySet(id string) (crypto.KeySet, error) {
+	ks := crypto.KeySet{Id: id}
+	tx := s.db.First(&ks)
+
+	return ks, tx.Error
 }
 func (s SqlDatabase) StoreUsedProofs(proof cashu.ProofsUsed) error {
 	return s.db.Create(proof).Error
@@ -131,11 +143,11 @@ func (s SqlDatabase) GetLightningInvoices(paid bool) ([]invoice.Invoice, error) 
 
 // GetLightningInvoice reads lighting invoice from db
 func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoicer, error) {
-	invoice := cashu.CreateInvoice()
-	invoice.SetHash(hash)
-	tx := s.db.Find(invoice)
-	log.WithFields(cashuLog.WithLoggable(invoice, tx.Error)).Info("storing lightning invoice")
-	return invoice, tx.Error
+	i := cashu.CreateInvoice()
+	i.SetHash(hash)
+	tx := s.db.Find(i)
+	log.WithFields(cashuLog.WithLoggable(i, tx.Error)).Info("storing lightning invoice")
+	return i, tx.Error
 }
 
 // UpdateLightningInvoice updates lightning invoice in db

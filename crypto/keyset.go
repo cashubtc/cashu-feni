@@ -15,7 +15,7 @@ import (
 const MaxOrder = 64
 
 type KeySet struct {
-	Id             string
+	Id             string `gorm:"primaryKey"`
 	DerivationPath string
 	PublicKeys     PublicKeyList  `gorm:"-"`
 	PrivateKeys    PrivateKeyList `gorm:"-"`
@@ -33,7 +33,12 @@ func NewKeySet(masterKey, derivationPath string) *KeySet {
 	ks.DeriveKeySetId()
 	return ks
 }
-
+func (k *KeySet) SetPublicKeyList(keys map[uint64]*secp256k1.PublicKey) {
+	for amount, key := range keys {
+		k.PublicKeys = append(k.PublicKeys, PublicKey{Key: key, Amount: amount})
+	}
+	sort.Sort(k.PublicKeys)
+}
 func (k *KeySet) DeriveKeys(masterKey string) {
 	k.PrivateKeys = deriveKeys(masterKey, k.DerivationPath)
 }
@@ -44,6 +49,15 @@ func (k *KeySet) DerivePublicKeys() {
 
 func (k *KeySet) DeriveKeySetId() {
 	k.Id = deriveKeySetId(k.PublicKeys)
+}
+
+// GetKeySetPublicKeys will return current public keys for all amounts
+func GetKeySetPublicKeys(keySet *KeySet) map[uint64]string {
+	ret := make(map[uint64]string, 0)
+	for _, key := range keySet.PublicKeys {
+		ret[key.Amount] = hex.EncodeToString(key.Key.SerializeCompressed())
+	}
+	return ret
 }
 
 // deriveKeys will generate private keys for the mint server
