@@ -20,7 +20,7 @@ type MintResponse struct {
 }
 
 type MintRequest struct {
-	BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
+	Outputs cashu.BlindedMessages `json:"outputs"`
 }
 type MeltResponse struct {
 	Paid     bool   `json:"paid"`

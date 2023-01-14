@@ -46,7 +46,7 @@ var Wallet MintWallet
 // corresponding to the given amounts and secrets.
 func constructOutputs(amounts []uint64, secrets []string) (api.MintRequest, []*secp256k1.PrivateKey) {
 	// Create a new empty MintRequest with a slice of blinded messages.
-	payloads := api.MintRequest{BlindedMessages: make(cashu.BlindedMessages, 0)}
+	payloads := api.MintRequest{Outputs: make(cashu.BlindedMessages, 0)}
 	// Create an empty slice of private keys.
 	privateKeys := make([]*secp256k1.PrivateKey, 0)
 	// For each pair of amount and secret in the input slices,
@@ -62,7 +62,7 @@ func constructOutputs(amounts []uint64, secrets []string) (api.MintRequest, []*s
 		// Append the private key to the slice of private keys.
 		privateKeys = append(privateKeys, r)
 		// Append a new blinded message to the MintRequest using the given amount and the computed public key.
-		payloads.BlindedMessages = append(payloads.BlindedMessages,
+		payloads.Outputs = append(payloads.Outputs,
 			cashu.BlindedMessage{Amount: pair.Second, B_: fmt.Sprintf("%x", pub.SerializeCompressed())})
 	}
 	// Return the MintRequest and the slice of private keys.
@@ -334,7 +334,7 @@ func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string
 	}
 	// TODO -- check used secrets(secrtes)
 	payloads, rs := constructOutputs(amounts, secrets)
-	response, err := WalletClient.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.BlindedMessages})
+	response, err := WalletClient.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.Outputs})
 	if err != nil {
 		return nil, nil, err
 	}

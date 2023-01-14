@@ -208,14 +208,14 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 // @Tags POST
 func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 	pr := r.URL.Query().Get("payment_hash")
-	mintRequest := MintRequest{BlindedMessages: make(cashu.BlindedMessages, 0)}
+	mintRequest := MintRequest{Outputs: make(cashu.BlindedMessages, 0)}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&mintRequest)
 	if err != nil {
 		panic(err)
 	}
 
-	promises, err := api.Mint.MintWithoutKeySet(mintRequest.BlindedMessages, pr)
+	promises, err := api.Mint.MintWithoutKeySet(mintRequest.Outputs, pr)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
