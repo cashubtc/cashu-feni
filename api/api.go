@@ -11,8 +11,14 @@ type Api struct {
 	HttpServer *http.Server
 	Mint       *mint.Mint
 }
-
-type MintResponse []cashu.BlindedSignature
+type Mint struct {
+	Url     string   `json:"url"`
+	KeySets []string `json:"ks"`
+}
+type MintResponse struct {
+	Proofs []cashu.BlindedSignature `json:"proofs"`
+	Mints  map[string]Mint          `json:"mints"`
+}
 
 type MintRequest struct {
 	BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`

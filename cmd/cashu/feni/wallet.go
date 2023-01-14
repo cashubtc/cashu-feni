@@ -118,7 +118,7 @@ func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 	if err != nil {
 		panic(err)
 	}
-	return w.constructProofs(*blindedSignatures, secrets, privateKeys)
+	return w.constructProofs(blindedSignatures.Proofs, secrets, privateKeys)
 }
 
 func (w MintWallet) constructProofs(promises []cashu.BlindedSignature, secrets []string, privateKeys []*secp256k1.PrivateKey) []cashu.Proof {
