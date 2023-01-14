@@ -392,13 +392,8 @@ func (api Api) split(w http.ResponseWriter, r *http.Request) {
 	}
 	proofs := payload.Proofs
 	amount := payload.Amount
-	// todo -- remove this mapping from output_data to outputs.
-	// https://github.com/callebtc/cashu/pull/20
-	if payload.Outputs.BlindedMessages == nil {
-		payload.Outputs.BlindedMessages = payload.OutputData.BlindedMessages
-	}
 	outputs := payload.Outputs
-	fstPromise, sendPromise, err := api.Mint.Split(proofs, amount, outputs.BlindedMessages, api.Mint.LoadKeySet(api.Mint.KeySetId))
+	fstPromise, sendPromise, err := api.Mint.Split(proofs, amount, outputs, api.Mint.LoadKeySet(api.Mint.KeySetId))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return

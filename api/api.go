@@ -54,15 +54,9 @@ type CheckFeesResponse struct {
 type CheckFeesRequest struct {
 	Pr string `json:"pr"`
 }
+
 type SplitRequest struct {
-	Proofs  cashu.Proofs `json:"proofs"`
-	Amount  uint64       `json:"amount"`
-	Outputs struct {
-		BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
-	} `json:"outputs,omitempty"`
-	// todo -- remove output data in future version. This is only used for backward compatibility
-	// check https://github.com/callebtc/cashu/pull/20
-	OutputData *struct {
-		BlindedMessages cashu.BlindedMessages `json:"blinded_messages"`
-	} `json:"output_data,omitempty" swaggerignore:"true"`
+	Proofs  cashu.Proofs           `json:"proofs"`
+	Amount  uint64                 `json:"amount"`
+	Outputs []cashu.BlindedMessage `json:"outputs"`
 }

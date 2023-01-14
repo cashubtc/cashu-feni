@@ -334,7 +334,7 @@ func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string
 	}
 	// TODO -- check used secrets(secrtes)
 	payloads, rs := constructOutputs(amounts, secrets)
-	response, err := WalletClient.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads})
+	response, err := WalletClient.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.BlindedMessages})
 	if err != nil {
 		return nil, nil, err
 	}
