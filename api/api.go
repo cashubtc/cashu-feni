@@ -16,8 +16,7 @@ type Mint struct {
 	KeySets []string `json:"ks"`
 }
 type MintResponse struct {
-	Proofs []cashu.BlindedSignature `json:"proofs"`
-	Mints  map[string]Mint          `json:"mints"`
+	Promises []cashu.BlindedSignature `json:"promises"`
 }
 
 type MintRequest struct {

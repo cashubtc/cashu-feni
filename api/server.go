@@ -220,7 +220,7 @@ func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	resp := MintResponse{Proofs: promises}
+	resp := MintResponse{Promises: promises}
 	data, err := json.Marshal(resp)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
