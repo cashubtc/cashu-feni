@@ -1,7 +1,6 @@
 package feni
 
 import (
-	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/crypto"
@@ -39,7 +38,6 @@ func defaultConfig() {
 }
 func init() {
 
-	WalletClient = NewClient()
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
@@ -55,6 +53,8 @@ func init() {
 		defaultConfig()
 		return
 	}
+	WalletClient = NewClient()
+
 	// initialize the default wallet (no other option selected using -w)
 	lightning.Config.Lightning.Enabled = Config.Lightning
 	InitializeDatabase(Config.Wallet)
@@ -62,12 +62,11 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 
 	Wallet = MintWallet{proofs: make([]cashu.Proof, 0), keys: make(map[uint64]*secp256k1.PublicKey)}
-	WalletClient = &Client{url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)}
-	mintServerPublickeys, err := WalletClient.Keys()
+	mintServerPublicKeys, err := WalletClient.Keys()
 	if err != nil {
 		panic(err)
 	}
-	Wallet.keys = mintServerPublickeys
+	Wallet.keys = mintServerPublicKeys
 	keySet, err := WalletClient.KeySets()
 	if err != nil {
 		panic(err)

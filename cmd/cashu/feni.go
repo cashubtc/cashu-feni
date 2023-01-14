@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/c-bata/go-prompt"
 	"github.com/cashubtc/cashu-feni/cmd/cashu/feni"
+	_ "net/http/pprof"
 	"os"
 	"strings"
 )

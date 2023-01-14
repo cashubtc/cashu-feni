@@ -5,7 +5,6 @@ import (
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/cashubtc/cashu-feni/lightning/invoice"
-	cashuLog "github.com/cashubtc/cashu-feni/log"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -131,11 +130,10 @@ func (s SqlDatabase) GetLightningInvoices(paid bool) ([]invoice.Invoice, error) 
 
 // GetLightningInvoice reads lighting invoice from db
 func (s SqlDatabase) GetLightningInvoice(hash string) (lightning.Invoicer, error) {
-	invoice := cashu.CreateInvoice()
-	invoice.SetHash(hash)
-	tx := s.db.Find(invoice)
-	log.WithFields(cashuLog.WithLoggable(invoice, tx.Error)).Info("storing lightning invoice")
-	return invoice, tx.Error
+	inv := cashu.CreateInvoice()
+	inv.SetHash(hash)
+	tx := s.db.Find(inv)
+	return inv, tx.Error
 }
 
 // UpdateLightningInvoice updates lightning invoice in db

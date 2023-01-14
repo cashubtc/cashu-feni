@@ -11,13 +11,14 @@ require (
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0
 	github.com/fatih/structs v1.1.0
+	github.com/gohumble/go-nostr-http v0.0.0-20230110131620-d3404f80ec14
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/imroc/req v0.3.2
 	github.com/jinzhu/configor v1.2.1
 	github.com/joho/godotenv v1.4.0
 	github.com/lightningnetwork/lnd v0.15.0-beta
-	github.com/nbd-wtf/go-nostr v0.8.2
+	github.com/nbd-wtf/go-nostr v0.11.0
 	github.com/nbd-wtf/ln-decodepay v1.11.1
 	github.com/samber/lo v1.29.0
 	github.com/sirupsen/logrus v1.9.0
@@ -46,7 +47,6 @@ require (
 	github.com/btcsuite/btcwallet/wtxmgr v1.5.0 // indirect
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd // indirect
 	github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792 // indirect
-	github.com/btcsuite/winsvc v1.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/crypto/blake256 v1.0.0 // indirect
 	github.com/decred/dcrd/lru v1.0.0 // indirect
@@ -55,14 +55,11 @@ require (
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/spec v0.20.6 // indirect
 	github.com/go-openapi/swag v0.19.15 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
-	github.com/jessevdk/go-flags v1.4.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/jrick/logrotate v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kkdai/bstream v1.0.0 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
@@ -86,7 +83,6 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/swaggo/files v0.0.0-20220610200504-28940afbdbfe // indirect
-	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
 	github.com/valyala/fastjson v1.6.3 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.4 // indirect

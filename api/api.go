@@ -11,7 +11,7 @@ import (
 type Api struct {
 	HttpServer *http.Server
 	Mint       *mint.Mint
-	Nostr      *nostr.RelayPool
+	Nostr      *nostr.Relay
 }
 
 type MintResponse []cashu.BlindedSignature
