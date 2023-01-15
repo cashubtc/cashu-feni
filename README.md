@@ -35,9 +35,7 @@ This project aims to replicate the python mint implementation of cashu.
 
 ## From source
 
-These steps will help you installing cashu-feni from source.
-
-Please install the cashu client using ```pip install cashu```
+These steps will help you installing cashu-feni from source. This project has two parts, a Cashu command line wallet and a mint.
 
 ### Requirements
 
@@ -49,10 +47,18 @@ Please install the cashu client using ```pip install cashu```
 git clone https://github.com/cashubtc/cashu-feni && cd cashu-feni
 ```
 
-Copy `config_example.yaml` to `config.yaml` and update configuration values
+Copy `config_example.yaml` to `config.yaml` and update configuration values.
+
+#### Wallet
 
 ```bash
-go build . && ./cashu-feni
+go build -o feni cmd/cashu/feni.go && ./feni
+```
+
+#### Mint
+
+```bash
+go build -v -o cashu-feni cmd/mint/mint.go && ./cashu-feni
 ```
 
 ## Download
