@@ -3,12 +3,8 @@ name: tests
 on: [ push, pull_request ]
 
 jobs:
-  test:
+  golang:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ "3.9" ]
-        poetry-version: [ "1.2.1" ]
     steps:
       - uses: actions/checkout@v3
       - name: Set up Go
@@ -21,6 +17,25 @@ jobs:
         run: nohup go run cmd/mint/mint.go &
       - name: Golang run tests
         run: go test -coverprofile=coverage.txt -covermode=atomic -v ./...
+      - uses: codecov/codecov-action@v3
+        with:
+          verbose: true # optional (default = false)
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.9" ]
+        poetry-version: [ "1.3.1" ]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+      - name: Build
+        run: go build -v -o cashu-feni cmd/mint/mint.go
+      - name: Run Cashu Feni
+        run: nohup go run cmd/mint/mint.go &
       - uses: codecov/codecov-action@v3
         with:
           verbose: true # optional (default = false)
