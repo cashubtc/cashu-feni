@@ -68,7 +68,7 @@ func init() {
 	Wallet.loadDefaultMint()
 
 }
-func (w MintWallet) loadMint(keySetId string) {
+func (w *MintWallet) loadMint(keySetId string) {
 	/*keySet, err := storage.GetKeySet(db.KeySetWithId(keySetId))
 	if err != nil {
 		panic(err)
@@ -82,24 +82,24 @@ func (w MintWallet) loadMint(keySetId string) {
 	w.client.Url = w.currentKeySet.MintUrl
 	w.loadDefaultMint()
 }
-func (w *MintWallet) loadDefaultMint() {
-	activeKeys, err := w.client.Keys()
-	if err != nil {
-		panic(err)
-	}
-	keySet, _ := w.persistKeysSet(activeKeys)
-
-	persistedKeySets, err := storage.GetKeySet()
-	if err != nil {
-		panic(err)
-	}
-	w.keySets = append(w.keySets, persistedKeySets...)
-
+func (w *MintWallet) setCurrentKeySet(keySet crypto.KeySet) {
 	for _, set := range w.keySets {
 		if set.Id == keySet.Id {
 			w.currentKeySet = &keySet
 		}
 	}
+}
+func (w *MintWallet) loadPersistedKeySets() {
+	persistedKeySets, err := storage.GetKeySet()
+	if err != nil {
+		panic(err)
+	}
+	w.keySets = persistedKeySets
+}
+func (w *MintWallet) loadDefaultMint() {
+	keySet, _ := w.persistCurrentKeysSet()
+	w.loadPersistedKeySets()
+	w.setCurrentKeySet(keySet)
 	k, err := w.client.KeySets()
 	if err != nil {
 		panic(err)
@@ -115,6 +115,13 @@ func (w *MintWallet) loadDefaultMint() {
 		}
 	}
 
+}
+func (w *MintWallet) persistCurrentKeysSet() (crypto.KeySet, error) {
+	activeKeys, err := w.client.Keys()
+	if err != nil {
+		panic(err)
+	}
+	return w.persistKeysSet(activeKeys)
 }
 func (w *MintWallet) persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error) {
 	keySet := crypto.KeySet{MintUrl: w.client.Url, FirstSeen: time.Now(), PublicKeys: crypto.PublicKeyList{}}

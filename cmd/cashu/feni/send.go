@@ -25,7 +25,7 @@ var sendCommand = &cobra.Command{
 	Long:   `Send cashu tokens to another user`,
 	PreRun: PreRunFeni,
 	Annotations: map[string]string{
-		DynamicSuggestionsAnnotation: getLocksAnnotationValue,
+		DynamicSuggestionsAnnotation: getLocksAnnotationValue, // get suggestion for p2sh
 	},
 	Run: send,
 }
@@ -64,7 +64,7 @@ func send(cmd *cobra.Command, args []string) {
 // If an error occurs, the empty string is returned as the result and an error is returned as the second return value.
 func serializeToken(proofs []cashu.Proof, hideSecrets bool) (string, error) {
 	// Create a new Token structure with the given proofs and an empty Mints map.
-	token := Token{Proofs: proofs, Mints: map[string]map[string]interface{}{}}
+	token := Token{Proofs: proofs, Mints: Mints{}}
 
 	// Iterate over each proof in the `proofs` slice.
 	for i := range proofs {
@@ -86,11 +86,8 @@ func serializeToken(proofs []cashu.Proof, hideSecrets bool) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			token.Mints[keyset.MintUrl] = make(map[string]interface{}, 0)
-			token.Mints[keyset.MintUrl]["url"] = ks[0].MintUrl
-			token.Mints[keyset.MintUrl]["ks"] = make([]string, 0)
+			token.Mints[keyset.MintUrl] = Mint{URL: ks[0].MintUrl, Ks: []string{keyset.Id}}
 		}
-		token.Mints[keyset.MintUrl]["ks"] = append(token.Mints[keyset.MintUrl]["ks"].([]string), keyset.Id)
 	}
 	// Marshal the `token` structure as a JSON string.
 	jsonProofs, err := json.Marshal(token)
