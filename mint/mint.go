@@ -59,19 +59,32 @@ func New(masterKey string, opt ...Options) *Mint {
 }
 func (m Mint) setProofsPending(proofs []cashu.Proof) error {
 	for _, proof := range proofs {
-		if proof.Status == cashu.ProofStatusPending {
-			return fmt.Errorf("proofs already pending.")
+		p, err := m.database.GetUsedProofs(proof.Secret)
+		if err != nil {
+			return err
+		}
+		if len(p) == 1 {
+			if p[0].Status == cashu.ProofStatusPending {
+				return fmt.Errorf("proofs already pending.")
+			}
 		}
 		proof.Status = cashu.ProofStatusPending
-		err := m.database.StoreProof(proof)
+		err = m.database.StoreProof(proof)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
-func (m Mint) unsetProofsPending(proofs []cashu.Proof) {
-	m.database.GetUsedProofs()
+func (m Mint) unsetProofsPending(proofs []cashu.Proof) error {
+	for _, proof := range proofs {
+		proof.Status = cashu.ProofStatusSpent
+		err := m.database.StoreProof(proof)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 func (m Mint) LoadKeySet(id string) *crypto.KeySet {
 	return m.keySets[id]
@@ -460,6 +473,11 @@ raise Exception ("could not verify proofs.")
 */
 // melt will meld proofs
 func (m *Mint) Melt(proofs []cashu.Proof, invoice string) (payment lightning.Payment, err error) {
+	err = m.setProofsPending(proofs)
+	if err != nil {
+		return
+	}
+	defer m.unsetProofsPending(proofs)
 	var total uint64
 	for _, proof := range proofs {
 		// verify every proof and sum total amount
@@ -494,6 +512,11 @@ func (m *Mint) Melt(proofs []cashu.Proof, invoice string) (payment lightning.Pay
 
 // split will split proofs. creates BlindedSignatures from BlindedMessages.
 func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.BlindedMessage, keySet *crypto.KeySet) ([]cashu.BlindedSignature, []cashu.BlindedSignature, error) {
+	err := m.setProofsPending(proofs)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer m.unsetProofsPending(proofs)
 	total := lo.SumBy[cashu.Proof](proofs, func(p cashu.Proof) uint64 {
 		return p.Amount
 	})
@@ -501,7 +524,7 @@ func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.Blinde
 		return nil, nil, fmt.Errorf("split amount is higher than the total sum.")
 	}
 	// verifySplitAmount
-	amount, err := verifySplitAmount(amount)
+	amount, err = verifySplitAmount(amount)
 
 	if err != nil {
 		return nil, nil, err

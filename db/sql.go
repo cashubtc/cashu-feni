@@ -92,9 +92,13 @@ func (s SqlDatabase) GetReservedProofs() ([]cashu.Proof, error) {
 }
 
 // GetUsedProofs reads all proofs from db
-func (s SqlDatabase) GetUsedProofs() ([]cashu.Proof, error) {
-	proofs := make([]cashu.Proof, 0)
-	tx := s.db.Find(&proofs)
+func (s SqlDatabase) GetUsedProofs(secrets ...string) ([]cashu.Proof, error) {
+	proofs := make([]cashu.Proof, len(secrets))
+	var tx = s.db
+	if len(secrets) > 0 {
+		tx = s.db.Where("(secret) in ?", secrets)
+	}
+	tx = tx.Find(&proofs)
 	return proofs, tx.Error
 }
 
@@ -104,7 +108,7 @@ func (s SqlDatabase) StoreProof(p cashu.Proof) error {
 	return s.db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "secret"}}, // key colume
 		DoUpdates: clause.AssignmentColumns([]string{"reserved", "send_id"}),
-	}).Create(&p).Error
+	}).Save(&p).Error
 }
 
 func (s SqlDatabase) GetScripts(address string) ([]cashu.P2SHScript, error) {
