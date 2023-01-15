@@ -104,7 +104,7 @@ func (s SqlDatabase) StoreProof(p cashu.Proof) error {
 	return s.db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "secret"}}, // key colume
 		DoUpdates: clause.AssignmentColumns([]string{"reserved", "send_id"}),
-	}).Create(&p).Error
+	}).Save(&p).Error
 }
 
 func (s SqlDatabase) GetScripts(address string) ([]cashu.P2SHScript, error) {
