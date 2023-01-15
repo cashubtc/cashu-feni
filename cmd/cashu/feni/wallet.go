@@ -36,8 +36,10 @@ func Zip[T, U any](ts []T, us []U) []Pair[T, U] {
 
 type MintWallet struct {
 	//	keys    map[uint64]*secp256k1.PublicKey // current public keys from mint server
-	keySets []crypto.KeySet // current keySet id from mint server.
-	proofs  []cashu.Proof
+	keySets       []crypto.KeySet // current keySet id from mint server.
+	proofs        []cashu.Proof
+	currentKeySet *crypto.KeySet
+	client        *Client
 }
 
 var Wallet MintWallet
@@ -115,7 +117,7 @@ func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 		panic(err)
 	}
 	req, privateKeys := constructOutputs(amounts, secrets)
-	blindedSignatures, err := WalletClient.Mint(req, paymentHash)
+	blindedSignatures, err := w.client.Mint(req, paymentHash)
 	if err != nil {
 		panic(err)
 	}
@@ -133,9 +135,9 @@ func (w MintWallet) constructProofs(promises []cashu.BlindedSignature, secrets [
 		if err != nil {
 			return nil
 		}
-		C := crypto.ThirdStepAlice(*C_, *privateKeys[i], *w.keySets[len(w.keySets)-1].PublicKeys.GetKeyByAmount(promise.Amount).Key)
+		C := crypto.ThirdStepAlice(*C_, *privateKeys[i], *w.currentKeySet.PublicKeys.GetKeyByAmount(promise.Amount).Key)
 		proofs = append(proofs, cashu.Proof{
-			Id:     w.keySets[len(w.keySets)-1].Id,
+			Id:     w.currentKeySet.Id,
 			Amount: promise.Amount,
 			C:      fmt.Sprintf("%x", C.SerializeCompressed()),
 			Secret: secrets[i],
@@ -218,7 +220,7 @@ func RandStringRunes(n int) string {
 }
 
 func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) error {
-	res, err := WalletClient.Melt(api.MeltRequest{Proofs: proofs, Invoice: invoice})
+	res, err := w.client.Melt(api.MeltRequest{Proofs: proofs, Invoice: invoice})
 	if err != nil {
 		return err
 	}
@@ -365,7 +367,7 @@ func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string
 	}
 	// TODO -- check used secrets(secrtes)
 	payloads, rs := constructOutputs(amounts, secrets)
-	response, err := WalletClient.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.Outputs})
+	response, err := w.client.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.Outputs})
 	if err != nil {
 		return nil, nil, err
 	}

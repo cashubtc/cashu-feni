@@ -39,9 +39,6 @@ func defaultConfig() {
 
 }
 func init() {
-	WalletClient = &Client{
-		Url: "http://0.0.0.0:3338",
-	}
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
@@ -63,8 +60,10 @@ func init() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	Wallet = MintWallet{proofs: make([]cashu.Proof, 0)}
-	WalletClient = &Client{Url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)}
+	Wallet = MintWallet{
+		proofs: make([]cashu.Proof, 0),
+		client: &Client{Url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)},
+	}
 
 	Wallet.loadDefaultMint()
 
@@ -75,21 +74,33 @@ func (w MintWallet) loadMint(keySetId string) {
 		panic(err)
 	}
 	*/
+	for _, set := range w.keySets {
+		if set.Id == keySetId {
+			w.currentKeySet = &set
+		}
+	}
+	w.client.Url = w.currentKeySet.MintUrl
+	w.loadDefaultMint()
 }
 func (w *MintWallet) loadDefaultMint() {
-	/*	activeKeys, err := WalletClient.Keys()
-		if err != nil {
-			panic(err)
-		}
-		keyset, _ := persistKeysSet(activeKeys)
-		Wallet.keySets = append(Wallet.keySets, keyset)
-	*/
+	activeKeys, err := w.client.Keys()
+	if err != nil {
+		panic(err)
+	}
+	keySet, _ := w.persistKeysSet(activeKeys)
+
 	persistedKeySets, err := storage.GetKeySet()
 	if err != nil {
 		panic(err)
 	}
 	w.keySets = append(w.keySets, persistedKeySets...)
-	k, err := WalletClient.KeySets()
+
+	for _, set := range w.keySets {
+		if set.Id == keySet.Id {
+			w.currentKeySet = &keySet
+		}
+	}
+	k, err := w.client.KeySets()
 	if err != nil {
 		panic(err)
 	}
@@ -97,15 +108,16 @@ func (w *MintWallet) loadDefaultMint() {
 		if _, found := lo.Find[crypto.KeySet](w.keySets, func(k crypto.KeySet) bool {
 			return set == k.Id
 		}); !found {
-			err = checkAndPersistKeySet(set)
+			err = w.checkAndPersistKeySet(set)
 			if err != nil {
 				panic(err)
 			}
 		}
 	}
+
 }
-func persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error) {
-	keySet := crypto.KeySet{MintUrl: WalletClient.Url, FirstSeen: time.Now(), PublicKeys: crypto.PublicKeyList{}}
+func (w *MintWallet) persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error) {
+	keySet := crypto.KeySet{MintUrl: w.client.Url, FirstSeen: time.Now(), PublicKeys: crypto.PublicKeyList{}}
 	keySet.SetPublicKeyList(keys)
 	keySet.DeriveKeySetId()
 	err := storage.StoreKeySet(keySet)
@@ -114,15 +126,15 @@ func persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error)
 	}
 	return keySet, nil
 }
-func checkAndPersistKeySet(id string) error {
+func (w *MintWallet) checkAndPersistKeySet(id string) error {
 	var ks []crypto.KeySet
 	var err error
 	if ks, err = storage.GetKeySet(db.KeySetWithId(id)); err != nil || len(ks) == 0 {
-		keys, err := WalletClient.KeysForKeySet(id)
+		keys, err := w.client.KeysForKeySet(id)
 		if err != nil {
 			return err
 		}
-		k, err := persistKeysSet(keys)
+		k, err := w.persistKeysSet(keys)
 		ks = append(ks, k)
 		if err != nil {
 			return err
