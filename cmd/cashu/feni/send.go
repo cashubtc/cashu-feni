@@ -1,9 +1,11 @@
 package feni
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/c-bata/go-prompt"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/db"
@@ -20,7 +22,7 @@ func init() {
 var lockFlag string
 
 var sendCommand = &cobra.Command{
-	Use:    "send",
+	Use:    "send <amount> <mint_id>",
 	Short:  "Send tokens",
 	Long:   `Send cashu tokens to another user`,
 	PreRun: PreRunFeni,
@@ -29,8 +31,86 @@ var sendCommand = &cobra.Command{
 	},
 	Run: send,
 }
+var filteredKeySets []crypto.KeySet
+var GetMintsDynamic = func(annotationValue string) []prompt.Suggest {
+	keysets, err := storage.GetKeySet()
+	if err != nil {
+		return nil
+	}
+	suggestions := make([]prompt.Suggest, 0)
+	setBalance := make(map[string]uint64)
+	setBalanceAvailable := make(map[string]uint64)
+	balances, err := Wallet.balancePerKeySet()
+	if err != nil {
+		panic(err)
+	}
+	filteredKeySets = lo.UniqBy[crypto.KeySet, string](keysets, func(k crypto.KeySet) string {
+		setBalance[k.MintUrl] = balances[k.Id].Balance
+		setBalanceAvailable[k.MintUrl] = balances[k.Id].Available
+		return k.MintUrl
+	})
+
+	for i, set := range filteredKeySets {
+		suggestions = append(suggestions, prompt.Suggest{
+			Text:        fmt.Sprintf("%d", i),
+			Description: fmt.Sprintf("Balance: %d sat (available: %d) URL: %s\n", setBalance[set.MintUrl], setBalanceAvailable[set.MintUrl], set.MintUrl)})
+	}
+	return suggestions
+}
+
+func askMintSelection(cmd *cobra.Command) error {
+	keysets, err := storage.GetKeySet()
+	if err != nil {
+		return nil
+	}
+	setBalance := make(map[string]uint64)
+	setBalanceAvailable := make(map[string]uint64)
+	balances, err := Wallet.balancePerKeySet()
+	if err != nil {
+		panic(err)
+	}
+	filteredKeySets = lo.UniqBy[crypto.KeySet, string](keysets, func(k crypto.KeySet) string {
+		setBalance[k.MintUrl] = balances[k.Id].Balance
+		setBalanceAvailable[k.MintUrl] = balances[k.Id].Available
+		return k.MintUrl
+	})
+
+	for i, set := range filteredKeySets {
+		cmd.Printf("Mint: %d Balance: %d sat (available: %d) URL: %s\n", i+1, setBalance[set.MintUrl], setBalanceAvailable[set.MintUrl], set.MintUrl)
+	}
+	cmd.Printf("Select mint [1-%d, press enter default 1]\n\n", len(filteredKeySets))
+	Wallet.client.Url = filteredKeySets[askInt(cmd)-1].MintUrl
+	Wallet.loadDefaultMint()
+	return nil
+}
+func askInt(cmd *cobra.Command) int {
+	reader := cmd.InOrStdin()
+	in := []byte{}
+	for i := 0; i <= 8; i++ {
+		c := make([]byte, 1)
+		_, err := reader.Read(c)
+		if err != nil {
+			return 0
+		}
+		if c[0] == 13 {
+			in = bytes.Trim(in, "\x00")
+			break
+		}
+		cmd.Printf(string(in))
+		in = append(in, c[0])
+
+	}
+	s, err := strconv.Atoi(string(in))
+	fmt.Printf("%d, %v", s, err)
+	return s
+	return 0
+}
 
 func send(cmd *cobra.Command, args []string) {
+	if len(args) < 2 {
+		cmd.Help()
+		return
+	}
 	if lockFlag != "" && len(lockFlag) < 22 {
 		fmt.Println("Error: lock has to be at least 22 characters long.")
 		return
@@ -39,6 +119,9 @@ func send(cmd *cobra.Command, args []string) {
 	if lockFlag != "" && flagIsPay2ScriptHash() {
 		p2sh = true
 	}
+	mint, _ := strconv.Atoi(args[1])
+	Wallet.client.Url = filteredKeySets[mint].MintUrl
+	Wallet.loadDefaultMint()
 	amount, err := strconv.Atoi(args[0])
 	if err != nil {
 		panic(err)
@@ -51,11 +134,11 @@ func send(cmd *cobra.Command, args []string) {
 	if lockFlag != "" && !p2sh {
 		hide = true
 	}
-	coin, err := serializeToken(sendProofs, hide)
+	token, err := serializeToken(sendProofs, hide)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(coin)
+	fmt.Println(token)
 }
 
 // serializeToken function serializes a slice of cashu.Proof structures into a Token structure and returns the result as a string.

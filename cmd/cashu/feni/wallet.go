@@ -245,7 +245,9 @@ func (w MintWallet) getKeySet(id string) (crypto.KeySet, error) {
 
 func (w MintWallet) GetSpendableProofs() ([]cashu.Proof, error) {
 	spendable := make([]cashu.Proof, 0)
-	for _, proof := range w.proofs {
+	for _, proof := range lo.Filter[cashu.Proof](w.proofs, func(p cashu.Proof, i int) bool {
+		return p.Id == w.currentKeySet.Id
+	}) {
 		if proof.Reserved {
 			continue
 		}

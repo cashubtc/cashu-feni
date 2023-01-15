@@ -5,9 +5,11 @@ import (
 	"github.com/c-bata/go-prompt"
 	"github.com/cashubtc/cashu-feni/cmd/cashu/feni"
 	"os"
+	"regexp"
 	"strings"
 )
 
+var sendRegex = regexp.MustCompile("send [0-9] ")
 var advancedPrompt = &feni.CobraPrompt{
 	RootCmd:                  feni.RootCmd,
 	PersistFlagValues:        true,
@@ -28,6 +30,11 @@ var advancedPrompt = &feni.CobraPrompt{
 			}
 		} else if document.Text == "locks " || document.Text == "-l " {
 			if suggestions := feni.GetLocksDynamic(annotationValue); suggestions != nil {
+				return suggestions
+			}
+		} else if sendRegex.MatchString(document.Text) {
+			document.Text = fmt.Sprintf("%s %s", document.Text, "-m ")
+			if suggestions := feni.GetMintsDynamic(annotationValue); suggestions != nil {
 				return suggestions
 			}
 		}
