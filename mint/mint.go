@@ -59,11 +59,17 @@ func New(masterKey string, opt ...Options) *Mint {
 }
 func (m Mint) setProofsPending(proofs []cashu.Proof) error {
 	for _, proof := range proofs {
-		if proof.Status == cashu.ProofStatusPending {
-			return fmt.Errorf("proofs already pending.")
+		p, err := m.database.GetUsedProofs(proof.Secret)
+		if err != nil {
+			return err
+		}
+		if len(p) == 1 {
+			if p[0].Status == cashu.ProofStatusPending {
+				return fmt.Errorf("proofs already pending.")
+			}
 		}
 		proof.Status = cashu.ProofStatusPending
-		err := m.database.StoreProof(proof)
+		err = m.database.StoreProof(proof)
 		if err != nil {
 			return err
 		}
