@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/crypto"
+	"github.com/cashubtc/cashu-feni/db"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -81,12 +82,12 @@ func serializeToken(proofs []cashu.Proof, hideSecrets bool) (string, error) {
 			return "", fmt.Errorf("error finding keyset")
 		}
 		if _, ok := token.Mints[keyset.Id]; !ok {
-			ks, err := storage.GetKeySet(proofs[i].Id)
+			ks, err := storage.GetKeySet(db.KeySetWithId(proofs[i].Id))
 			if err != nil {
 				return "", err
 			}
 			token.Mints[keyset.MintUrl] = make(map[string]interface{}, 0)
-			token.Mints[keyset.MintUrl]["url"] = ks.MintUrl
+			token.Mints[keyset.MintUrl]["url"] = ks[0].MintUrl
 			token.Mints[keyset.MintUrl]["ks"] = make([]string, 0)
 		}
 		token.Mints[keyset.MintUrl]["ks"] = append(token.Mints[keyset.MintUrl]["ks"].([]string), keyset.Id)

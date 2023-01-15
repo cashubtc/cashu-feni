@@ -65,10 +65,13 @@ func (s SqlDatabase) Migrate(object interface{}) error {
 	return nil
 }
 
-func (s SqlDatabase) GetKeySet(id string) (crypto.KeySet, error) {
-	ks := crypto.KeySet{Id: id}
-	tx := s.db.First(&ks)
-
+func (s SqlDatabase) GetKeySet(options ...GetKeySetOptions) ([]crypto.KeySet, error) {
+	ks := make([]crypto.KeySet, 0)
+	var tx = s.db
+	for _, o := range options {
+		tx = o(tx)
+	}
+	tx = tx.Find(&ks)
 	return ks, tx.Error
 }
 func (s SqlDatabase) StoreUsedProofs(proof cashu.ProofsUsed) error {

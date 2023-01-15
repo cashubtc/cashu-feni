@@ -9,6 +9,7 @@ import (
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/joho/godotenv"
+	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"os"
@@ -65,30 +66,42 @@ func init() {
 	Wallet = MintWallet{proofs: make([]cashu.Proof, 0)}
 	WalletClient = &Client{Url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)}
 
-	loadMint()
+	Wallet.loadDefaultMint()
 
 }
-func loadMint() {
-	activeKeys, err := WalletClient.Keys()
+func (w MintWallet) loadMint(keySetId string) {
+	/*keySet, err := storage.GetKeySet(db.KeySetWithId(keySetId))
 	if err != nil {
 		panic(err)
 	}
-	keyset, _ := persistKeysSet(activeKeys)
-	Wallet.keySets = append(Wallet.keySets, keyset)
-
+	*/
+}
+func (w *MintWallet) loadDefaultMint() {
+	/*	activeKeys, err := WalletClient.Keys()
+		if err != nil {
+			panic(err)
+		}
+		keyset, _ := persistKeysSet(activeKeys)
+		Wallet.keySets = append(Wallet.keySets, keyset)
+	*/
+	persistedKeySets, err := storage.GetKeySet()
+	if err != nil {
+		panic(err)
+	}
+	w.keySets = append(w.keySets, persistedKeySets...)
 	k, err := WalletClient.KeySets()
 	if err != nil {
 		panic(err)
 	}
 	for _, set := range k.KeySets {
-		if set == keyset.Id {
-			continue
+		if _, found := lo.Find[crypto.KeySet](w.keySets, func(k crypto.KeySet) bool {
+			return set == k.Id
+		}); !found {
+			err = checkAndPersistKeySet(set)
+			if err != nil {
+				panic(err)
+			}
 		}
-		err = checkAndPersistKeySet(set)
-		if err != nil {
-			panic(err)
-		}
-
 	}
 }
 func persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error) {
@@ -102,19 +115,20 @@ func persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error)
 	return keySet, nil
 }
 func checkAndPersistKeySet(id string) error {
-	var ks crypto.KeySet
+	var ks []crypto.KeySet
 	var err error
-	if ks, err = storage.GetKeySet(id); err != nil {
+	if ks, err = storage.GetKeySet(db.KeySetWithId(id)); err != nil || len(ks) == 0 {
 		keys, err := WalletClient.KeysForKeySet(id)
 		if err != nil {
 			return err
 		}
-		ks, err = persistKeysSet(keys)
+		k, err := persistKeysSet(keys)
+		ks = append(ks, k)
 		if err != nil {
 			return err
 		}
 	}
-	Wallet.keySets = append(Wallet.keySets, ks)
+	Wallet.keySets = append(Wallet.keySets, ks...)
 	return nil
 }
 func InitializeDatabase(wallet string) {
