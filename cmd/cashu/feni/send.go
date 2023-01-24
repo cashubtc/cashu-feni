@@ -38,22 +38,23 @@ var GetMintsDynamic = func(annotationValue string) []prompt.Suggest {
 		return nil
 	}
 	suggestions := make([]prompt.Suggest, 0)
-	setBalance := make(map[string]uint64)
 	setBalanceAvailable := make(map[string]uint64)
 	balances, err := Wallet.balancePerKeySet()
 	if err != nil {
 		panic(err)
 	}
 	filteredKeySets = lo.UniqBy[crypto.KeySet, string](keysets, func(k crypto.KeySet) string {
-		setBalance[k.MintUrl] = balances[k.Id].Balance
-		setBalanceAvailable[k.MintUrl] = balances[k.Id].Available
+		if b := balances.ById(k.Id); b != nil {
+			setBalanceAvailable[k.MintUrl] = b.Available
+		}
+
 		return k.MintUrl
 	})
 
 	for i, set := range filteredKeySets {
 		suggestions = append(suggestions, prompt.Suggest{
 			Text:        fmt.Sprintf("%d", i),
-			Description: fmt.Sprintf("Balance: %d sat (available: %d) URL: %s\n", setBalance[set.MintUrl], setBalanceAvailable[set.MintUrl], set.MintUrl)})
+			Description: fmt.Sprintf("Balance: %d sat URL: %s\n", setBalanceAvailable[set.MintUrl], set.MintUrl)})
 	}
 	return suggestions
 }
@@ -70,8 +71,8 @@ func askMintSelection(cmd *cobra.Command) error {
 		panic(err)
 	}
 	filteredKeySets = lo.UniqBy[crypto.KeySet, string](keysets, func(k crypto.KeySet) string {
-		setBalance[k.MintUrl] = balances[k.Id].Balance
-		setBalanceAvailable[k.MintUrl] = balances[k.Id].Available
+		setBalance[k.MintUrl] = balances.ById(k.Id).Balance
+		setBalanceAvailable[k.MintUrl] = balances.ById(k.Id).Available
 		return k.MintUrl
 	})
 
