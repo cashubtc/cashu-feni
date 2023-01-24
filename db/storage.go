@@ -5,6 +5,7 @@ import (
 	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/cashubtc/cashu-feni/lightning/invoice"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -22,10 +23,24 @@ type MintStorage interface {
 	GetLightningInvoice(hash string) (lightning.Invoicer, error)
 	GetLightningInvoices(paid bool) ([]invoice.Invoice, error) // todo -- the return type of this interface function must be of type lightning.Invoicer
 	UpdateLightningInvoice(hash string, options ...UpdateInvoiceOptions) error
-	GetKeySet(id string) (crypto.KeySet, error)
+	GetKeySet(options ...GetKeySetOptions) ([]crypto.KeySet, error)
 	StoreKeySet(k crypto.KeySet) error
 	Migrate(interface{}) error
 }
+
+func KeySetWithId(id string) GetKeySetOptions {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("id = ?", id)
+	}
+}
+
+func KeySetWithMintUrl(mintUrl string) GetKeySetOptions {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("mint_url = ?", mintUrl)
+	}
+}
+
+type GetKeySetOptions func(db *gorm.DB) *gorm.DB
 
 func UpdateInvoiceWithIssued(issued bool) UpdateInvoiceOptions {
 	return func(invoice lightning.Invoicer) {

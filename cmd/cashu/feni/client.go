@@ -16,7 +16,7 @@ type Client struct {
 	Url string
 }
 
-var WalletClient *Client
+//var WalletClient *Client
 
 func checkError(resp *req.Resp) error {
 	if resp.Response().StatusCode >= 300 {

@@ -9,6 +9,7 @@ import (
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/joho/godotenv"
+	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"os"
@@ -38,9 +39,6 @@ func defaultConfig() {
 
 }
 func init() {
-	WalletClient = &Client{
-		Url: "http://0.0.0.0:3338",
-	}
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
@@ -62,37 +60,71 @@ func init() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	Wallet = MintWallet{proofs: make([]cashu.Proof, 0)}
-	WalletClient = &Client{Url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)}
+	Wallet = MintWallet{
+		proofs: make([]cashu.Proof, 0),
+		client: &Client{Url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)},
+	}
 
-	loadMint()
+	Wallet.loadDefaultMint()
 
 }
-func loadMint() {
-	activeKeys, err := WalletClient.Keys()
+func (w *MintWallet) loadMint(keySetId string) {
+	/*keySet, err := storage.GetKeySet(db.KeySetWithId(keySetId))
 	if err != nil {
 		panic(err)
 	}
-	keyset, _ := persistKeysSet(activeKeys)
-	Wallet.keySets = append(Wallet.keySets, keyset)
-
-	k, err := WalletClient.KeySets()
+	*/
+	for _, set := range w.keySets {
+		if set.Id == keySetId {
+			w.currentKeySet = &set
+		}
+	}
+	w.client.Url = w.currentKeySet.MintUrl
+	w.loadDefaultMint()
+}
+func (w *MintWallet) setCurrentKeySet(keySet crypto.KeySet) {
+	for _, set := range w.keySets {
+		if set.Id == keySet.Id {
+			w.currentKeySet = &keySet
+		}
+	}
+}
+func (w *MintWallet) loadPersistedKeySets() {
+	persistedKeySets, err := storage.GetKeySet()
+	if err != nil {
+		panic(err)
+	}
+	w.keySets = persistedKeySets
+}
+func (w *MintWallet) loadDefaultMint() {
+	keySet, _ := w.persistCurrentKeysSet()
+	w.loadPersistedKeySets()
+	w.setCurrentKeySet(keySet)
+	k, err := w.client.KeySets()
 	if err != nil {
 		panic(err)
 	}
 	for _, set := range k.KeySets {
-		if set == keyset.Id {
-			continue
+		if _, found := lo.Find[crypto.KeySet](w.keySets, func(k crypto.KeySet) bool {
+			return set == k.Id
+		}); !found {
+			err = w.checkAndPersistKeySet(set)
+			if err != nil {
+				panic(err)
+			}
 		}
-		err = checkAndPersistKeySet(set)
-		if err != nil {
-			panic(err)
-		}
-
 	}
+
 }
-func persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error) {
-	keySet := crypto.KeySet{MintUrl: WalletClient.Url, FirstSeen: time.Now(), PublicKeys: crypto.PublicKeyList{}}
+func (w *MintWallet) persistCurrentKeysSet() (crypto.KeySet, error) {
+	activeKeys, err := w.client.Keys()
+	if err != nil {
+		panic(err)
+	}
+	return w.persistKeysSet(activeKeys)
+}
+func (w *MintWallet) persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error) {
+	keySet := crypto.KeySet{MintUrl: w.client.Url, FirstSeen: time.Now(), PublicKeys: crypto.PublicKeyList{}}
 	keySet.SetPublicKeyList(keys)
 	keySet.DeriveKeySetId()
 	err := storage.StoreKeySet(keySet)
@@ -101,20 +133,21 @@ func persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error)
 	}
 	return keySet, nil
 }
-func checkAndPersistKeySet(id string) error {
-	var ks crypto.KeySet
+func (w *MintWallet) checkAndPersistKeySet(id string) error {
+	var ks []crypto.KeySet
 	var err error
-	if ks, err = storage.GetKeySet(id); err != nil {
-		keys, err := WalletClient.KeysForKeySet(id)
+	if ks, err = storage.GetKeySet(db.KeySetWithId(id)); err != nil || len(ks) == 0 {
+		keys, err := w.client.KeysForKeySet(id)
 		if err != nil {
 			return err
 		}
-		ks, err = persistKeysSet(keys)
+		k, err := w.persistKeysSet(keys)
+		ks = append(ks, k)
 		if err != nil {
 			return err
 		}
 	}
-	Wallet.keySets = append(Wallet.keySets, ks)
+	Wallet.keySets = append(Wallet.keySets, ks...)
 	return nil
 }
 func InitializeDatabase(wallet string) {

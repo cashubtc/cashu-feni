@@ -14,6 +14,7 @@ import (
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"math/rand"
+	"net/url"
 	"time"
 )
 
@@ -35,8 +36,10 @@ func Zip[T, U any](ts []T, us []U) []Pair[T, U] {
 
 type MintWallet struct {
 	//	keys    map[uint64]*secp256k1.PublicKey // current public keys from mint server
-	keySets []crypto.KeySet // current keySet id from mint server.
-	proofs  []cashu.Proof
+	keySets       []crypto.KeySet // current keySet id from mint server.
+	proofs        []cashu.Proof
+	currentKeySet *crypto.KeySet
+	client        *Client
 }
 
 var Wallet MintWallet
@@ -114,7 +117,7 @@ func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 		panic(err)
 	}
 	req, privateKeys := constructOutputs(amounts, secrets)
-	blindedSignatures, err := WalletClient.Mint(req, paymentHash)
+	blindedSignatures, err := w.client.Mint(req, paymentHash)
 	if err != nil {
 		panic(err)
 	}
@@ -132,9 +135,9 @@ func (w MintWallet) constructProofs(promises []cashu.BlindedSignature, secrets [
 		if err != nil {
 			return nil
 		}
-		C := crypto.ThirdStepAlice(*C_, *privateKeys[i], *w.keySets[len(w.keySets)-1].PublicKeys.GetKeyByAmount(promise.Amount).Key)
+		C := crypto.ThirdStepAlice(*C_, *privateKeys[i], *w.currentKeySet.PublicKeys.GetKeyByAmount(promise.Amount).Key)
 		proofs = append(proofs, cashu.Proof{
-			Id:     w.keySets[len(w.keySets)-1].Id,
+			Id:     w.currentKeySet.Id,
 			Amount: promise.Amount,
 			C:      fmt.Sprintf("%x", C.SerializeCompressed()),
 			Secret: secrets[i],
@@ -146,10 +149,14 @@ func (w MintWallet) constructProofs(promises []cashu.BlindedSignature, secrets [
 type KeySetBalance struct {
 	Balance   uint64
 	Available uint64
+	URL       url.URL
 }
 type Balance map[string]KeySetBalance
 
-func (w MintWallet) balancePerKeySet() Balance {
+func (w MintWallet) getProofsPerMintUrl() cashu.Proofs {
+	return w.proofs
+}
+func (w MintWallet) balancePerKeySet() (Balance, error) {
 	b := Balance{}
 	for _, proof := range w.proofs {
 		proofBalance, ok := b[proof.Id]
@@ -163,9 +170,19 @@ func (w MintWallet) balancePerKeySet() Balance {
 		if !proof.Reserved {
 			proofBalance.Available += proof.Amount
 		}
+		keySet, found := lo.Find[crypto.KeySet](w.keySets, func(k crypto.KeySet) bool {
+			return k.Id == proof.Id
+		})
+		if found {
+			u, err := url.Parse(keySet.MintUrl)
+			if err != nil {
+				return b, err
+			}
+			proofBalance.URL = *u
+		}
 		b[proof.Id] = proofBalance
 	}
-	return b
+	return b, nil
 }
 func generateSecrets(secret string, n int) []string {
 	secrets := make([]string, 0)
@@ -203,7 +220,7 @@ func RandStringRunes(n int) string {
 }
 
 func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) error {
-	res, err := WalletClient.Melt(api.MeltRequest{Proofs: proofs, Invoice: invoice})
+	res, err := w.client.Melt(api.MeltRequest{Proofs: proofs, Invoice: invoice})
 	if err != nil {
 		return err
 	}
@@ -216,23 +233,41 @@ func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) error {
 	}
 	return fmt.Errorf("could not pay invoice")
 }
+func (w MintWallet) getKeySet(id string) (crypto.KeySet, error) {
+	k, found := lo.Find[crypto.KeySet](w.keySets, func(k crypto.KeySet) bool {
+		return k.Id == id
+	})
+	if !found {
+		return k, fmt.Errorf("keyset not found")
+	}
+	return k, nil
+}
 
-func (w MintWallet) GetSpendableProofs() []cashu.Proof {
+func (w MintWallet) GetSpendableProofs() ([]cashu.Proof, error) {
 	spendable := make([]cashu.Proof, 0)
-	for _, proof := range w.proofs {
+	for _, proof := range lo.Filter[cashu.Proof](w.proofs, func(p cashu.Proof, i int) bool {
+		return p.Id == w.currentKeySet.Id
+	}) {
 		if proof.Reserved {
 			continue
 		}
-		if proof.Id != w.keySets[len(w.keySets)-1].Id {
+		keySet, err := w.getKeySet(proof.Id)
+		if err != nil {
+			return nil, err
+		}
+		if proof.Id != keySet.Id {
 			continue
 		}
 		spendable = append(spendable, proof)
 	}
-	return spendable
+	return spendable, nil
 }
 
 func (w MintWallet) SplitToSend(amount uint64, scndSecret string, setReserved bool) (keep []cashu.Proof, send []cashu.Proof, err error) {
-	spendableProofs := w.GetSpendableProofs()
+	spendableProofs, err := w.GetSpendableProofs()
+	if err != nil {
+		return nil, nil, err
+	}
 	if SumProofs(spendableProofs) < amount {
 		return nil, nil, fmt.Errorf("balance to low.")
 	}
@@ -334,7 +369,7 @@ func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string
 	}
 	// TODO -- check used secrets(secrtes)
 	payloads, rs := constructOutputs(amounts, secrets)
-	response, err := WalletClient.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.Outputs})
+	response, err := w.client.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.Outputs})
 	if err != nil {
 		return nil, nil, err
 	}

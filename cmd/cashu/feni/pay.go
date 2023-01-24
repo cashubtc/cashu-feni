@@ -52,7 +52,7 @@ func ask(cmd *cobra.Command) bool {
 }
 func pay(cmd *cobra.Command, args []string) {
 	invoice := args[0]
-	fee, err := WalletClient.CheckFee(api.CheckFeesRequest{Pr: invoice})
+	fee, err := Wallet.client.CheckFee(api.CheckFeesRequest{Pr: invoice})
 	if err != nil {
 		log.Fatal(err)
 	}
