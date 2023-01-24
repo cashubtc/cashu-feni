@@ -31,7 +31,7 @@ func defaultConfig() {
 	log.Infof("Loading default configuration")
 	Config = WalletConfig{
 		Debug:          true,
-		Lightning:      false,
+		Lightning:      true,
 		MintServerHost: "https://8333.space",
 		MintServerPort: "3339",
 		Wallet:         "wallet",
@@ -39,6 +39,7 @@ func defaultConfig() {
 
 }
 func init() {
+	loaded := false
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
@@ -47,13 +48,15 @@ func init() {
 	err = godotenv.Load(p)
 	if err != nil {
 		defaultConfig()
-		return
+		loaded = true
 	}
-	err = env.Parse(&Config)
-	if err != nil {
-		defaultConfig()
-		return
+	if !loaded {
+		err = env.Parse(&Config)
+		if err != nil {
+			defaultConfig()
+		}
 	}
+
 	// initialize the default wallet (no other option selected using -w)
 	lightning.Config.Lightning.Enabled = Config.Lightning
 	InitializeDatabase(Config.Wallet)
