@@ -36,11 +36,12 @@ var Config Configuration
 
 const name = "config.yaml"
 
-func init() {
+func (c Configuration) Load() error {
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
+		var host = flag.String("host", "", "the default mint host name")
+		var port = flag.String("port", "", "the default mint port")
+
 		Config.Mint.Tls.Enabled = false
-		host := flag.String("host", "", "the default mint host name")
-		port := flag.String("port", "", "the default mint port")
 		flag.Parse()
 		if *port == "" {
 			*port = "3338"
@@ -57,7 +58,7 @@ func init() {
 		Config.DocReference = "http://0.0.0.0:3338/swagger/doc.json"
 		cfg, err := json.Marshal(Config)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		log.Warnf("could not load configuration. using default mint configuration instead")
 		log.Warnf(string(cfg))
@@ -65,7 +66,11 @@ func init() {
 		c := configor.New(&configor.Config{Silent: true})
 		err = c.Load(&Config, name)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+	return nil
+}
+func init() {
+
 }

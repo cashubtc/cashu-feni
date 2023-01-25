@@ -60,7 +60,10 @@ func New() *Api {
 			mint.WithInitialKeySet(Config.Mint.DerivationPath),
 		),
 	}
-
+	err = Config.Load()
+	if err != nil {
+		panic(err)
+	}
 	m.HttpServer.Handler = newRouter(m)
 	log.Trace("created mint server")
 	return m
