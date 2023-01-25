@@ -23,10 +23,14 @@ const (
 )
 
 func New() *Api {
+	err := Config.Load()
+	if err != nil {
+		panic(err)
+	}
 	// currently using sql storage only.
 	// this should be extensible for future versions.
 	sqlStorage := db.NewSqlDatabase()
-	err := sqlStorage.Migrate(cashu.Proof{})
+	err = sqlStorage.Migrate(cashu.Proof{})
 	if err != nil {
 		panic(err)
 	}
@@ -60,10 +64,7 @@ func New() *Api {
 			mint.WithInitialKeySet(Config.Mint.DerivationPath),
 		),
 	}
-	err = Config.Load()
-	if err != nil {
-		panic(err)
-	}
+
 	m.HttpServer.Handler = newRouter(m)
 	log.Trace("created mint server")
 	return m
