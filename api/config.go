@@ -4,6 +4,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"github.com/jinzhu/configor"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -38,8 +39,18 @@ const name = "config.yaml"
 func init() {
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
 		Config.Mint.Tls.Enabled = false
-		Config.Mint.Host = "0.0.0.0"
-		Config.Mint.Port = "3338"
+		host := flag.String("host", "", "the default mint host name")
+		port := flag.String("port", "", "the default mint port")
+		flag.Parse()
+		if *port == "" {
+			*port = "3338"
+		}
+		if *host == "" {
+			*host = "0.0.0.0"
+		}
+		Config.Mint.Host = *host
+		Config.Mint.Port = *port
+
 		Config.Mint.PrivateKey = "supersecretprivatekey"
 		Config.Mint.DerivationPath = "0/0/0/0"
 		Config.LogLevel = "trace"
