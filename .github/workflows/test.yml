@@ -51,6 +51,7 @@ jobs:
         with:
           repository: cashubtc/cashu
           path: cashu
+          submodules: recursive
       - name: Install dependencies
         run: |
           cd cashu
