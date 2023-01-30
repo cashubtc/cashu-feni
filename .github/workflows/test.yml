@@ -35,7 +35,7 @@ jobs:
       - name: Build
         run: go build -v -o cashu-feni cmd/mint/mint.go
       - name: Run Cashu Feni
-        run: nohup go run cmd/mint/mint.go &
+        run: nohup go run cmd/mint/mint.go -port 3337 &
       - uses: codecov/codecov-action@v3
         with:
           verbose: true # optional (default = false)
@@ -51,6 +51,7 @@ jobs:
         with:
           repository: cashubtc/cashu
           path: cashu
+          submodules: recursive
       - name: Install dependencies
         run: |
           cd cashu
