@@ -76,14 +76,14 @@ func (c Client) KeySets() (*api.GetKeySetsResponse, error) {
 }
 
 func (c Client) Check(data api.CheckRequest) (api.CheckResponse, error) {
+	check := api.CheckResponse{}
 	resp, err := req.Post(fmt.Sprintf("%s/check", c.Url), req.BodyJSON(data))
 	if err != nil {
-		return nil, err
+		return check, err
 	}
 	if err = checkError(resp); err != nil {
-		return nil, err
+		return check, err
 	}
-	check := api.CheckResponse{}
 	err = resp.ToJSON(&check)
 	return check, nil
 }

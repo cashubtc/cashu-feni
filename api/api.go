@@ -27,7 +27,6 @@ type MeltResponse struct {
 	Preimage string `json:"preimage"`
 }
 type GetKeysResponse map[int]string
-type CheckResponse map[string]bool
 type SplitResponse struct {
 	Fst []cashu.BlindedSignature `json:"fst"`
 	Snd []cashu.BlindedSignature `json:"snd"`
@@ -41,11 +40,14 @@ type GetMintResponse struct {
 }
 
 type MeltRequest struct {
-	Proofs  cashu.Proofs `json:"proofs"`
-	Invoice string       `json:"invoice"`
+	Proofs cashu.Proofs `json:"proofs"`
+	Pr     string       `json:"pr"`
 }
 type CheckRequest struct {
 	Proofs cashu.Proofs `json:"proofs"`
+}
+type CheckResponse struct {
+	Spendable []bool `json:"spendable"`
 }
 
 type CheckFeesResponse struct {

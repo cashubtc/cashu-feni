@@ -220,7 +220,7 @@ func RandStringRunes(n int) string {
 }
 
 func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) error {
-	res, err := w.client.Melt(api.MeltRequest{Proofs: proofs, Invoice: invoice})
+	res, err := w.client.Melt(api.MeltRequest{Proofs: proofs, Pr: invoice})
 	if err != nil {
 		return err
 	}

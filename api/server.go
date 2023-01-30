@@ -251,7 +251,7 @@ func (api Api) melt(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	payment, err := api.Mint.Melt(payload.Proofs, payload.Invoice)
+	payment, err := api.Mint.Melt(payload.Proofs, payload.Pr)
 	if err != nil {
 		log.WithFields(log.Fields{"error.message": err.Error()}).Errorf("error in melt")
 		return
