@@ -75,8 +75,8 @@ func (c Client) KeySets() (*api.GetKeySetsResponse, error) {
 	return &keySets, nil
 }
 
-func (c Client) Check(data api.CheckRequest) (api.CheckResponse, error) {
-	check := api.CheckResponse{}
+func (c Client) Check(data api.CheckSpendableRequest) (api.CheckSpendableResponse, error) {
+	check := api.CheckSpendableResponse{}
 	resp, err := req.Post(fmt.Sprintf("%s/check", c.Url), req.BodyJSON(data))
 	if err != nil {
 		return check, err

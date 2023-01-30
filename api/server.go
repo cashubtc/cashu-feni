@@ -335,13 +335,13 @@ func (api Api) getKeySets(w http.ResponseWriter, r *http.Request) {
 // @Summary Check spendable
 // @Description Get currently available public keys
 // @Produce  json
-// @Success 200 {object} CheckResponse
+// @Success 200 {object} CheckSpendableResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /check [post]
-// @Param CheckRequest body CheckRequest true "Model containing proofs to check"
+// @Param CheckSpendableRequest body CheckSpendableRequest true "Model containing proofs to check"
 // @Tags POST
 func (api Api) check(w http.ResponseWriter, r *http.Request) {
-	payload := CheckRequest{}
+	payload := CheckSpendableRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&payload)
 	if err != nil {

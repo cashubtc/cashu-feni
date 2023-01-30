@@ -43,10 +43,10 @@ type MeltRequest struct {
 	Proofs cashu.Proofs `json:"proofs"`
 	Pr     string       `json:"pr"`
 }
-type CheckRequest struct {
+type CheckSpendableRequest struct {
 	Proofs cashu.Proofs `json:"proofs"`
 }
-type CheckResponse struct {
+type CheckSpendableResponse struct {
 	Spendable []bool `json:"spendable"`
 }
 

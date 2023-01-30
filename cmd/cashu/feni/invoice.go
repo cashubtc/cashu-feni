@@ -81,7 +81,7 @@ func mintCmd(cmd *cobra.Command, args []string) {
 }
 
 func invalidate(proofs []cashu.Proof) error {
-	resp, err := Wallet.client.Check(api.CheckRequest{Proofs: proofs})
+	resp, err := Wallet.client.Check(api.CheckSpendableRequest{Proofs: proofs})
 	if err != nil {
 		return err
 	}
