@@ -23,10 +23,14 @@ const (
 )
 
 func New() *Api {
+	err := Config.Load()
+	if err != nil {
+		panic(err)
+	}
 	// currently using sql storage only.
 	// this should be extensible for future versions.
 	sqlStorage := db.NewSqlDatabase()
-	err := sqlStorage.Migrate(cashu.Proof{})
+	err = sqlStorage.Migrate(cashu.Proof{})
 	if err != nil {
 		panic(err)
 	}

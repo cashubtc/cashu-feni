@@ -4,6 +4,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"github.com/jinzhu/configor"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -35,18 +36,29 @@ var Config Configuration
 
 const name = "config.yaml"
 
-func init() {
+func (c Configuration) Load() error {
 	if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
+		var host = flag.String("host", "", "the default mint host name")
+		var port = flag.String("port", "", "the default mint port")
+
 		Config.Mint.Tls.Enabled = false
-		Config.Mint.Host = "0.0.0.0"
-		Config.Mint.Port = "3338"
+		flag.Parse()
+		if *port == "" {
+			*port = "3338"
+		}
+		if *host == "" {
+			*host = "0.0.0.0"
+		}
+		Config.Mint.Host = *host
+		Config.Mint.Port = *port
+
 		Config.Mint.PrivateKey = "supersecretprivatekey"
 		Config.Mint.DerivationPath = "0/0/0/0"
 		Config.LogLevel = "trace"
 		Config.DocReference = "http://0.0.0.0:3338/swagger/doc.json"
 		cfg, err := json.Marshal(Config)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		log.Warnf("could not load configuration. using default mint configuration instead")
 		log.Warnf(string(cfg))
@@ -54,7 +66,11 @@ func init() {
 		c := configor.New(&configor.Config{Silent: true})
 		err = c.Load(&Config, name)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+	return nil
+}
+func init() {
+
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slices"
 	"math/rand"
 	"net/url"
 	"time"
@@ -146,24 +147,34 @@ func (w MintWallet) constructProofs(promises []cashu.BlindedSignature, secrets [
 	return proofs
 }
 
-type KeySetBalance struct {
+type Balance struct {
 	Balance   uint64
 	Available uint64
-	URL       url.URL
+	Mint      Mint
 }
-type Balance map[string]KeySetBalance
+type Balances []*Balance
 
+func (b Balances) ById(id string) *Balance {
+	for _, ba := range b {
+		if found := slices.Contains[string](ba.Mint.Ks, id); found {
+			return ba
+		}
+	}
+	return nil
+}
 func (w MintWallet) getProofsPerMintUrl() cashu.Proofs {
 	return w.proofs
 }
-func (w MintWallet) balancePerKeySet() (Balance, error) {
-	b := Balance{}
+func (w MintWallet) balancePerKeySet() (Balances, error) {
+	balances := make(Balances, 0)
 	for _, proof := range w.proofs {
-		proofBalance, ok := b[proof.Id]
-		if ok {
+		proofBalance, foundBalance := lo.Find[*Balance](balances, func(b *Balance) bool {
+			return slices.Contains[string](b.Mint.Ks, proof.Id)
+		})
+		if foundBalance {
 			proofBalance.Balance += proof.Amount
 		} else {
-			proofBalance = KeySetBalance{
+			proofBalance = &Balance{
 				Balance: proof.Amount,
 			}
 		}
@@ -176,14 +187,18 @@ func (w MintWallet) balancePerKeySet() (Balance, error) {
 		if found {
 			u, err := url.Parse(keySet.MintUrl)
 			if err != nil {
-				return b, err
+				return nil, err
 			}
-			proofBalance.URL = *u
+			proofBalance.Mint.URL = u.String()
+			proofBalance.Mint.Ks = []string{keySet.Id}
 		}
-		b[proof.Id] = proofBalance
+		if !foundBalance {
+			balances = append(balances, proofBalance)
+		}
 	}
-	return b, nil
+	return balances, nil
 }
+
 func generateSecrets(secret string, n int) []string {
 	secrets := make([]string, 0)
 	var generator func(i int)
