@@ -22,6 +22,12 @@ const (
 	ResourceSwaggerPathPrefix = "/swagger/"
 )
 
+// todo -- this responses are currently not used.
+type Api struct {
+	HttpServer *http.Server
+	Mint       *mint.Mint
+}
+
 func New() *Api {
 	err := Config.Load()
 	if err != nil {
@@ -139,7 +145,7 @@ func appendSwaggoHandler(router *mux.Router) {
 // @Param CheckFeesRequest body CheckFeesRequest true "Model containing lightning invoice"
 // @Tags POST
 func (api Api) checkFee(w http.ResponseWriter, r *http.Request) {
-	feesRequest := CheckFeesRequest{}
+	feesRequest := cashu.CheckFeesRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&feesRequest)
 	if err != nil {
@@ -151,7 +157,7 @@ func (api Api) checkFee(w http.ResponseWriter, r *http.Request) {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	response := CheckFeesResponse{Fee: fee / 1000}
+	response := cashu.CheckFeesResponse{Fee: fee / 1000}
 	res, err := json.Marshal(response)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
@@ -212,7 +218,7 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 // @Tags POST
 func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 	pr := r.URL.Query().Get("payment_hash")
-	mintRequest := MintRequest{Outputs: make(cashu.BlindedMessages, 0)}
+	mintRequest := cashu.MintRequest{Outputs: make(cashu.BlindedMessages, 0)}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&mintRequest)
 	if err != nil {
@@ -224,7 +230,7 @@ func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	resp := MintResponse{Promises: promises}
+	resp := cashu.MintResponse{Promises: promises}
 	data, err := json.Marshal(resp)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
@@ -248,19 +254,19 @@ func (api Api) mint(w http.ResponseWriter, r *http.Request) {
 // @Tags POST
 func (api Api) melt(w http.ResponseWriter, r *http.Request) {
 
-	payload := MeltRequest{}
+	payload := cashu.MeltRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&payload)
 	if err != nil {
 		panic(err)
 	}
 
-	payment, err := api.Mint.Melt(payload.Proofs, payload.Invoice)
+	payment, err := api.Mint.Melt(payload.Proofs, payload.Pr)
 	if err != nil {
 		log.WithFields(log.Fields{"error.message": err.Error()}).Errorf("error in melt")
 		return
 	}
-	response := MeltResponse{Paid: payment.IsPaid(), Preimage: payment.GetPreimage()}
+	response := cashu.MeltResponse{Paid: payment.IsPaid(), Preimage: payment.GetPreimage()}
 	res, err := json.Marshal(response)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
@@ -322,7 +328,7 @@ func (api Api) getKeysByKeySet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api Api) getKeySets(w http.ResponseWriter, r *http.Request) {
-	response := GetKeySetsResponse{KeySets: api.Mint.GetKeySetIds()}
+	response := cashu.GetKeySetsResponse{KeySets: api.Mint.GetKeySetIds()}
 	res, err := json.Marshal(response)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
@@ -335,13 +341,13 @@ func (api Api) getKeySets(w http.ResponseWriter, r *http.Request) {
 // @Summary Check spendable
 // @Description Get currently available public keys
 // @Produce  json
-// @Success 200 {object} CheckResponse
+// @Success 200 {object} CheckSpendableResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /check [post]
-// @Param CheckRequest body CheckRequest true "Model containing proofs to check"
+// @Param CheckSpendableRequest body CheckSpendableRequest true "Model containing proofs to check"
 // @Tags POST
 func (api Api) check(w http.ResponseWriter, r *http.Request) {
-	payload := CheckRequest{}
+	payload := cashu.CheckSpendableRequest{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&payload)
 	if err != nil {
@@ -371,7 +377,7 @@ func (api Api) check(w http.ResponseWriter, r *http.Request) {
 // @Tags POST
 func (api Api) split(w http.ResponseWriter, r *http.Request) {
 
-	payload := SplitRequest{}
+	payload := cashu.SplitRequest{}
 	buf, _ := io.ReadAll(r.Body)
 	body := io.NopCloser(bytes.NewBuffer(buf))
 	bodyInvalidAmount := io.NopCloser(bytes.NewBuffer(buf))
@@ -402,7 +408,7 @@ func (api Api) split(w http.ResponseWriter, r *http.Request) {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	response := SplitResponse{Fst: fstPromise, Snd: sendPromise}
+	response := cashu.SplitResponse{Fst: fstPromise, Snd: sendPromise}
 	res, err := json.Marshal(response)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))

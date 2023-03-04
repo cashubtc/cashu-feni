@@ -365,10 +365,10 @@ func verifyNoDuplicateOutputs(outputs []cashu.BlindedMessage) bool {
 }
 
 // checkSpendables checks multiple proofs
-func (m *Mint) CheckSpendables(proofs []cashu.Proof) map[int]bool {
-	result := make(map[int]bool, 0)
-	for i, proof := range proofs {
-		result[i] = m.checkSpendable(proof)
+func (m *Mint) CheckSpendables(proofs []cashu.Proof) cashu.CheckSpendableResponse {
+	result := cashu.CheckSpendableResponse{Spendable: make([]bool, 0)}
+	for _, proof := range proofs {
+		result.Spendable = append(result.Spendable, m.checkSpendable(proof))
 	}
 	return result
 }
