@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/cashubtc/cashu-feni/api"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/db"
@@ -48,9 +47,9 @@ var Wallet MintWallet
 // constructOutputs takes in a slice of amounts and a slice of secrets, and
 // constructs a MintRequest with blinded messages and a slice of private keys
 // corresponding to the given amounts and secrets.
-func constructOutputs(amounts []uint64, secrets []string) (api.MintRequest, []*secp256k1.PrivateKey) {
+func constructOutputs(amounts []uint64, secrets []string) (cashu.MintRequest, []*secp256k1.PrivateKey) {
 	// Create a new empty MintRequest with a slice of blinded messages.
-	payloads := api.MintRequest{Outputs: make(cashu.BlindedMessages, 0)}
+	payloads := cashu.MintRequest{Outputs: make(cashu.BlindedMessages, 0)}
 	// Create an empty slice of private keys.
 	privateKeys := make([]*secp256k1.PrivateKey, 0)
 	// For each pair of amount and secret in the input slices,
@@ -235,7 +234,7 @@ func RandStringRunes(n int) string {
 }
 
 func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) error {
-	res, err := w.client.Melt(api.MeltRequest{Proofs: proofs, Pr: invoice})
+	res, err := w.client.Melt(cashu.MeltRequest{Proofs: proofs, Pr: invoice})
 	if err != nil {
 		return err
 	}
@@ -384,7 +383,7 @@ func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string
 	}
 	// TODO -- check used secrets(secrtes)
 	payloads, rs := constructOutputs(amounts, secrets)
-	response, err := w.client.Split(api.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.Outputs})
+	response, err := w.client.Split(cashu.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.Outputs})
 	if err != nil {
 		return nil, nil, err
 	}

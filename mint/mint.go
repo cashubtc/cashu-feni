@@ -5,13 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/btcsuite/btcd/btcutil"
-	"github.com/cashubtc/cashu-feni/api"
 	"github.com/cashubtc/cashu-feni/bitcoin"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/db"
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/cashubtc/cashu-feni/lightning/lnbits"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	decodepay "github.com/nbd-wtf/ln-decodepay"
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
@@ -365,8 +365,8 @@ func verifyNoDuplicateOutputs(outputs []cashu.BlindedMessage) bool {
 }
 
 // checkSpendables checks multiple proofs
-func (m *Mint) CheckSpendables(proofs []cashu.Proof) api.CheckSpendableResponse {
-	result := api.CheckSpendableResponse{Spendable: make([]bool, 0)}
+func (m *Mint) CheckSpendables(proofs []cashu.Proof) cashu.CheckSpendableResponse {
+	result := cashu.CheckSpendableResponse{Spendable: make([]bool, 0)}
 	for _, proof := range proofs {
 		result.Spendable = append(result.Spendable, m.checkSpendable(proof))
 	}

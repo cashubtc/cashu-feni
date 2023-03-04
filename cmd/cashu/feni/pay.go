@@ -2,7 +2,7 @@ package feni
 
 import (
 	"fmt"
-	"github.com/cashubtc/cashu-feni/api"
+	"github.com/cashubtc/cashu-feni/cashu"
 	decodepay "github.com/nbd-wtf/ln-decodepay"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -52,7 +52,7 @@ func ask(cmd *cobra.Command) bool {
 }
 func pay(cmd *cobra.Command, args []string) {
 	invoice := args[0]
-	fee, err := Wallet.client.CheckFee(api.CheckFeesRequest{Pr: invoice})
+	fee, err := Wallet.client.CheckFee(cashu.CheckFeesRequest{Pr: invoice})
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -114,3 +114,55 @@ func CreateInvoice() lightning.Invoicer {
 	}
 	return nil
 }
+
+type Mint struct {
+	Url     string   `json:"url"`
+	KeySets []string `json:"ks"`
+}
+type MintResponse struct {
+	Promises []BlindedSignature `json:"promises"`
+}
+
+type MintRequest struct {
+	Outputs BlindedMessages `json:"outputs"`
+}
+type MeltResponse struct {
+	Paid     bool   `json:"paid"`
+	Preimage string `json:"preimage"`
+}
+type GetKeysResponse map[int]string
+type SplitResponse struct {
+	Fst []BlindedSignature `json:"fst"`
+	Snd []BlindedSignature `json:"snd"`
+}
+type GetKeySetsResponse struct {
+	KeySets []string `json:"keysets"`
+}
+type GetMintResponse struct {
+	Pr   string
+	Hash string
+}
+
+type MeltRequest struct {
+	Proofs Proofs `json:"proofs"`
+	Pr     string `json:"pr"`
+}
+type CheckSpendableRequest struct {
+	Proofs Proofs `json:"proofs"`
+}
+type CheckSpendableResponse struct {
+	Spendable []bool `json:"spendable"`
+}
+
+type CheckFeesResponse struct {
+	Fee uint64 `json:"fee"`
+}
+type CheckFeesRequest struct {
+	Pr string `json:"pr"`
+}
+
+type SplitRequest struct {
+	Proofs  Proofs           `json:"proofs"`
+	Amount  uint64           `json:"amount"`
+	Outputs []BlindedMessage `json:"outputs"`
+}

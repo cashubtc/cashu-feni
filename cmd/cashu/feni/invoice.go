@@ -2,7 +2,6 @@ package feni
 
 import (
 	"fmt"
-	"github.com/cashubtc/cashu-feni/api"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/db"
 	"github.com/cashubtc/cashu-feni/lightning"
@@ -81,7 +80,7 @@ func mintCmd(cmd *cobra.Command, args []string) {
 }
 
 func invalidate(proofs []cashu.Proof) error {
-	resp, err := Wallet.client.Check(api.CheckSpendableRequest{Proofs: proofs})
+	resp, err := Wallet.client.Check(cashu.CheckSpendableRequest{Proofs: proofs})
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,6 @@ package feni
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/cashubtc/cashu-feni/api"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
@@ -62,7 +61,7 @@ func (c Client) KeysForKeySet(kid string) (map[uint64]*secp256k1.PublicKey, erro
 	return parseKeys(req.Get(fmt.Sprintf("%s/keys/%s", c.Url, kid)))
 }
 
-func (c Client) KeySets() (*api.GetKeySetsResponse, error) {
+func (c Client) KeySets() (*cashu.GetKeySetsResponse, error) {
 	resp, err := req.Get(fmt.Sprintf("%s/keysets", c.Url))
 	if err != nil {
 		return nil, err
@@ -70,13 +69,13 @@ func (c Client) KeySets() (*api.GetKeySetsResponse, error) {
 	if err = checkError(resp); err != nil {
 		return nil, err
 	}
-	keySets := api.GetKeySetsResponse{}
+	keySets := cashu.GetKeySetsResponse{}
 	err = resp.ToJSON(&keySets)
 	return &keySets, nil
 }
 
-func (c Client) Check(data api.CheckSpendableRequest) (api.CheckSpendableResponse, error) {
-	check := api.CheckSpendableResponse{}
+func (c Client) Check(data cashu.CheckSpendableRequest) (cashu.CheckSpendableResponse, error) {
+	check := cashu.CheckSpendableResponse{}
 	resp, err := req.Post(fmt.Sprintf("%s/check", c.Url), req.BodyJSON(data))
 	if err != nil {
 		return check, err
@@ -88,7 +87,7 @@ func (c Client) Check(data api.CheckSpendableRequest) (api.CheckSpendableRespons
 	return check, nil
 }
 
-func (c Client) Split(data api.SplitRequest) (*api.SplitResponse, error) {
+func (c Client) Split(data cashu.SplitRequest) (*cashu.SplitResponse, error) {
 	resp, err := req.Post(fmt.Sprintf("%s/split", c.Url), req.BodyJSON(data))
 	if err != nil {
 		return nil, err
@@ -96,11 +95,11 @@ func (c Client) Split(data api.SplitRequest) (*api.SplitResponse, error) {
 	if err = checkError(resp); err != nil {
 		return nil, err
 	}
-	split := api.SplitResponse{}
+	split := cashu.SplitResponse{}
 	err = resp.ToJSON(&split)
 	return &split, nil
 }
-func (c Client) Melt(data api.MeltRequest) (*api.MeltResponse, error) {
+func (c Client) Melt(data cashu.MeltRequest) (*cashu.MeltResponse, error) {
 	resp, err := req.Post(fmt.Sprintf("%s/melt", c.Url), req.BodyJSON(data))
 	if err != nil {
 		return nil, err
@@ -108,12 +107,12 @@ func (c Client) Melt(data api.MeltRequest) (*api.MeltResponse, error) {
 	if err = checkError(resp); err != nil {
 		return nil, err
 	}
-	melt := api.MeltResponse{}
+	melt := cashu.MeltResponse{}
 	err = resp.ToJSON(&melt)
 	return &melt, nil
 }
 
-func (c Client) Mint(data api.MintRequest, paymentHash string) (*api.MintResponse, error) {
+func (c Client) Mint(data cashu.MintRequest, paymentHash string) (*cashu.MintResponse, error) {
 	requestUrl := fmt.Sprintf("%s/mint", c.Url)
 	if paymentHash != "" {
 		requestUrl += fmt.Sprintf("?payment_hash=%s", paymentHash)
@@ -125,7 +124,7 @@ func (c Client) Mint(data api.MintRequest, paymentHash string) (*api.MintRespons
 	if err = checkError(resp); err != nil {
 		return nil, err
 	}
-	mint := api.MintResponse{}
+	mint := cashu.MintResponse{}
 	err = resp.ToJSON(&mint)
 	return &mint, nil
 }
@@ -137,7 +136,7 @@ func (c Client) GetMint(amount int64) (lightning.Invoicer, error) {
 	if err = checkError(resp); err != nil {
 		return nil, err
 	}
-	mint := api.GetMintResponse{}
+	mint := cashu.GetMintResponse{}
 	err = resp.ToJSON(&mint)
 	invoice := cashu.CreateInvoice()
 	invoice.SetAmount(amount)
@@ -147,7 +146,7 @@ func (c Client) GetMint(amount int64) (lightning.Invoicer, error) {
 	return invoice, nil
 }
 
-func (c Client) CheckFee(CheckFeesRequest api.CheckFeesRequest) (*api.CheckFeesResponse, error) {
+func (c Client) CheckFee(CheckFeesRequest cashu.CheckFeesRequest) (*cashu.CheckFeesResponse, error) {
 	resp, err := req.Post(fmt.Sprintf("%s/checkfees", c.Url), req.BodyJSON(CheckFeesRequest))
 	if err != nil {
 		return nil, err
@@ -155,7 +154,7 @@ func (c Client) CheckFee(CheckFeesRequest api.CheckFeesRequest) (*api.CheckFeesR
 	if err = checkError(resp); err != nil {
 		return nil, err
 	}
-	fees := api.CheckFeesResponse{}
+	fees := cashu.CheckFeesResponse{}
 	err = resp.ToJSON(&fees)
 	return &fees, nil
 }
