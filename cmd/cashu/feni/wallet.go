@@ -234,7 +234,7 @@ func RandStringRunes(n int) string {
 }
 
 func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) ([]cashu.Proof, error) {
-	secrets := make([]string, 4)
+	secrets := make([]string, 0)
 	amounts := []uint64{0, 0, 0, 0}
 	for i := 0; i < 4; i++ {
 		secrets = append(secrets, generateSecret())
