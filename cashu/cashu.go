@@ -127,8 +127,9 @@ type MintRequest struct {
 	Outputs BlindedMessages `json:"outputs"`
 }
 type MeltResponse struct {
-	Paid     bool   `json:"paid"`
-	Preimage string `json:"preimage"`
+	Paid     bool               `json:"paid"`
+	Preimage string             `json:"preimage"`
+	Change   []BlindedSignature `json:"change,omitempty"`
 }
 type GetKeysResponse map[int]string
 type SplitResponse struct {
@@ -144,8 +145,9 @@ type GetMintResponse struct {
 }
 
 type MeltRequest struct {
-	Proofs Proofs `json:"proofs"`
-	Pr     string `json:"pr"`
+	Proofs  Proofs           `json:"proofs"`
+	Pr      string           `json:"pr"`
+	Outputs []BlindedMessage `json:"outputs,omitempty"`
 }
 type CheckSpendableRequest struct {
 	Proofs Proofs `json:"proofs"`
