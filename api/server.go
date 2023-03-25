@@ -266,6 +266,7 @@ func (api Api) melt(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{"error.message": err.Error()}).Errorf("error in melt")
 		return
 	}
+	// TODO -- add Change
 	response := cashu.MeltResponse{Paid: payment.IsPaid(), Preimage: payment.GetPreimage()}
 	res, err := json.Marshal(response)
 	if err != nil {

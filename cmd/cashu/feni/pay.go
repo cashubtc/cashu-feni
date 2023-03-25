@@ -79,9 +79,14 @@ func pay(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	log.Infof("Paying Lightning invoice ...")
-	err = Wallet.PayLightning(sendProofs, invoice)
+	changeProofs, err := Wallet.PayLightning(sendProofs, invoice)
+	if changeProofs != nil {
+		err = storeProofs(changeProofs)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }

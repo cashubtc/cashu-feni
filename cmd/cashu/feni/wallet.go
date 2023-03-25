@@ -233,19 +233,26 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 
-func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) error {
-	res, err := w.client.Melt(cashu.MeltRequest{Proofs: proofs, Pr: invoice})
+func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) ([]cashu.Proof, error) {
+	secrets := make([]string, 0)
+	amounts := []uint64{0, 0, 0, 0}
+	for i := 0; i < 4; i++ {
+		secrets = append(secrets, generateSecret())
+	}
+	payloads, rs := constructOutputs(amounts, secrets)
+	res, err := w.client.Melt(cashu.MeltRequest{Proofs: proofs, Pr: invoice, Outputs: payloads.Outputs})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if res.Paid {
+		changeProofs := w.constructProofs(res.Change, secrets, rs)
 		err = invalidate(proofs)
 		if err != nil {
-			return err
+			return changeProofs, err
 		}
-		return nil
+		return changeProofs, nil
 	}
-	return fmt.Errorf("could not pay invoice")
+	return nil, fmt.Errorf("could not pay invoice")
 }
 func (w MintWallet) getKeySet(id string) (crypto.KeySet, error) {
 	k, found := lo.Find[crypto.KeySet](w.keySets, func(k crypto.KeySet) bool {

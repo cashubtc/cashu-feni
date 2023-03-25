@@ -37,6 +37,7 @@ type Invoicer interface {
 type Payment interface {
 	IsPaid() bool        // IsPaid must return true, if payment is fulfilled
 	GetPreimage() string // GetPreimage must return the preimage of the payment
+	// TODO -- add Change
 }
 
 // Client should be able to perform lightning services
