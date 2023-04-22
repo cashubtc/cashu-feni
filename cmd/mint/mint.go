@@ -13,7 +13,7 @@ import (
 // @contact.url https://8333.space:3338
 func main() {
 	cashuLog.Configure(api.Config.LogLevel)
-	log.Info("starting (feni) cashu mint server")
 	m := api.New()
+	log.Info("starting (feni) cashu mint server, listening on ", m.HttpServer.Addr)
 	m.StartServer()
 }
