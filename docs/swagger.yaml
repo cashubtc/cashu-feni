@@ -256,7 +256,7 @@ paths:
       - POST
   /split:
     post:
-      description: Requetst a set of tokens with amount "total" to be split into two
+      description: Requests a set of tokens with amount "total" to be split into two
         newly minted sets with amount "split" and "total-split".
       parameters:
       - description: Model containing proofs to split
