@@ -190,7 +190,12 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.WithField("invoice", invoice).Infof("created lightning invoice")
-	_, err = fmt.Fprintf(w, `{"pr": "%s", "hash": "%s"}`, invoice.GetPaymentRequest(), invoice.GetHash())
+	pr, err := crypto.EncryptAESGCM([]byte(api.Mint.MasterSha526), []byte(invoice.GetPaymentRequest()))
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
+	_, err = fmt.Fprintf(w, `{"pr": "%x", "hash": "%s"}`, pr, invoice.GetHash())
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -217,15 +222,20 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 // @Param        payment_hash    query     string  false  "payment hash for the mint"
 // @Tags POST
 func (api Api) mint(w http.ResponseWriter, r *http.Request) {
-	pr := r.URL.Query().Get("payment_hash")
+	hash := r.URL.Query().Get("hash")
+	pr, err := crypto.DecryptAESGCM([]byte(api.Mint.MasterSha526), []byte(hash))
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
 	mintRequest := cashu.MintRequest{Outputs: make(cashu.BlindedMessages, 0)}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&mintRequest)
+	err = decoder.Decode(&mintRequest)
 	if err != nil {
 		panic(err)
 	}
 
-	promises, err := api.Mint.MintWithoutKeySet(mintRequest.Outputs, pr)
+	promises, err := api.Mint.MintWithoutKeySet(mintRequest.Outputs, string(pr))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
