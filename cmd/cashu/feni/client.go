@@ -115,7 +115,7 @@ func (c Client) Melt(data cashu.MeltRequest) (*cashu.MeltResponse, error) {
 func (c Client) Mint(data cashu.MintRequest, paymentHash string) (*cashu.MintResponse, error) {
 	requestUrl := fmt.Sprintf("%s/mint", c.Url)
 	if paymentHash != "" {
-		requestUrl += fmt.Sprintf("?payment_hash=%s", paymentHash)
+		requestUrl += fmt.Sprintf("?hash=%s", paymentHash)
 	}
 	resp, err := req.Post(requestUrl, req.BodyJSON(data))
 	if err != nil {
