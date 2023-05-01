@@ -4,6 +4,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"math"
+	"reflect"
+	"strconv"
+	"strings"
+
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/cashubtc/cashu-feni/bitcoin"
 	"github.com/cashubtc/cashu-feni/cashu"
@@ -15,10 +20,6 @@ import (
 	decodepay "github.com/nbd-wtf/ln-decodepay"
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
-	"math"
-	"reflect"
-	"strconv"
-	"strings"
 )
 
 // Mint implements all functions for a cashu ledger.
@@ -262,7 +263,7 @@ func (m *Mint) generatePromise(amount uint64, keySet *crypto.KeySet, B_ *secp256
 	if err != nil {
 		return cashu.BlindedSignature{}, err
 	}
-	return cashu.BlindedSignature{C_: hex.EncodeToString(C_.SerializeCompressed()), Amount: amount}, nil
+	return cashu.BlindedSignature{Id: keySet.Id, C_: hex.EncodeToString(C_.SerializeCompressed()), Amount: amount}, nil
 }
 
 // generatePromises will generate multiple promises and signatures
