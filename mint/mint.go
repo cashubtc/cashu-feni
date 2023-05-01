@@ -77,8 +77,14 @@ func (m Mint) setProofsPending(proofs []cashu.Proof) error {
 	}
 	return nil
 }
-func (m Mint) unsetProofsPending(proofs []cashu.Proof) error {
+func (m Mint) unsetProofsPending(proofs []cashu.Proof, transactionError *error) error {
 	for _, proof := range proofs {
+		if transactionError != nil {
+			err := m.database.DeleteProof(proof)
+			if err != nil {
+				return err
+			}
+		}
 		proof.Status = cashu.ProofStatusSpent
 		err := m.database.StoreProof(proof)
 		if err != nil {
@@ -485,7 +491,7 @@ func (m *Mint) Melt(proofs []cashu.Proof, invoice string) (payment lightning.Pay
 	if err != nil {
 		return
 	}
-	defer m.unsetProofsPending(proofs)
+	defer m.unsetProofsPending(proofs, &err)
 	var total uint64
 	for _, proof := range proofs {
 		// verify every proof and sum total amount
@@ -524,7 +530,7 @@ func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.Blinde
 	if err != nil {
 		return nil, nil, err
 	}
-	defer m.unsetProofsPending(proofs)
+	defer m.unsetProofsPending(proofs, &err)
 	total := lo.SumBy[cashu.Proof](proofs, func(p cashu.Proof) uint64 {
 		return p.Amount
 	})
