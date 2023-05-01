@@ -223,13 +223,28 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 // @Param        payment_hash    query     string  false  "payment hash for the mint"
 // @Tags POST
 func (api Api) mint(w http.ResponseWriter, r *http.Request) {
-	hash, err := hex.DecodeString(r.URL.Query().Get("hash"))
+	var pr []byte
+	var err error
+	hash := r.URL.Query().Get("hash")
+	if len(hash) == 0 {
+		hash = r.URL.Query().Get("payment_hash")
+		if len(hash) == 0 {
+			responseError(w, cashu.NewErrorResponse(fmt.Errorf("invalid hash parameter")))
+			return
+		}
+	}
 
-	pr, err := crypto.DecryptAESGCM([]byte(api.Mint.MasterSha526), hash)
+	decodedHash, err := hex.DecodeString(hash)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
+	pr, err = crypto.DecryptAESGCM([]byte(api.Mint.MasterSha526), decodedHash)
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
+
 	mintRequest := cashu.MintRequest{Outputs: make(cashu.BlindedMessages, 0)}
 	decoder := json.NewDecoder(r.Body)
 	err = decoder.Decode(&mintRequest)
