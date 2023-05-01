@@ -99,13 +99,13 @@ func (s SqlDatabase) GetUsedProofs(secrets ...string) ([]cashu.Proof, error) {
 	proofs := make([]cashu.Proof, len(secrets))
 	var tx = s.db
 	if len(secrets) > 0 {
-		tx = s.db.Where("(secret) in ?", secrets)
+		tx = s.db.Where("secret in ?", secrets)
 	}
 	tx = tx.Find(&proofs)
 	return proofs, tx.Error
 }
 
-// InvalidateProof will write proof to db
+// StoreProof will write proof to db
 func (s SqlDatabase) StoreProof(p cashu.Proof) error {
 	log.WithFields(p.Log()).Info("invalidating proof")
 	return s.db.Clauses(clause.OnConflict{

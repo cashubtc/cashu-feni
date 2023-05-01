@@ -14,7 +14,7 @@ import (
 // AES-GCM provides both confidentiality and integrity.
 func EncryptAESGCM(key, plaintext []byte) ([]byte, error) {
 	// Create a new AES cipher with the given key
-	block, err := aes.NewCipher(key)
+	block, err := aes.NewCipher(key[:32])
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func EncryptAESGCM(key, plaintext []byte) ([]byte, error) {
 // AES-GCM provides both confidentiality and integrity.
 func DecryptAESGCM(key, ciphertext []byte) ([]byte, error) {
 	// Create a new AES cipher with the given key
-	block, err := aes.NewCipher(key)
+	block, err := aes.NewCipher(key[:32])
 	if err != nil {
 		return nil, err
 	}

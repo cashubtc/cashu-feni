@@ -136,12 +136,12 @@ func (c Client) GetMint(amount int64) (lightning.Invoicer, error) {
 	if err = checkError(resp); err != nil {
 		return nil, err
 	}
-	mint := cashu.GetMintResponse{}
-	err = resp.ToJSON(&mint)
+	mintResponse := cashu.GetMintResponse{}
+	err = resp.ToJSON(&mintResponse)
 	invoice := cashu.CreateInvoice()
 	invoice.SetAmount(amount)
-	invoice.SetHash(mint.Hash)
-	invoice.SetPaymentRequest(mint.Pr)
+	invoice.SetHash(mintResponse.Hash)
+	invoice.SetPaymentRequest(mintResponse.Pr)
 	invoice.SetTimeCreated(time.Now())
 	return invoice, nil
 }
