@@ -4,6 +4,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"math"
+	"reflect"
+	"strconv"
+	"strings"
+
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/cashubtc/cashu-feni/bitcoin"
 	"github.com/cashubtc/cashu-feni/cashu"
@@ -15,10 +20,6 @@ import (
 	decodepay "github.com/nbd-wtf/ln-decodepay"
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
-	"math"
-	"reflect"
-	"strconv"
-	"strings"
 )
 
 // Mint implements all functions for a cashu ledger.
@@ -76,8 +77,14 @@ func (m Mint) setProofsPending(proofs []cashu.Proof) error {
 	}
 	return nil
 }
-func (m Mint) unsetProofsPending(proofs []cashu.Proof) error {
+func (m Mint) unsetProofsPending(proofs []cashu.Proof, transactionError *error) error {
 	for _, proof := range proofs {
+		if transactionError != nil {
+			err := m.database.DeleteProof(proof)
+			if err != nil {
+				return err
+			}
+		}
 		proof.Status = cashu.ProofStatusSpent
 		err := m.database.StoreProof(proof)
 		if err != nil {
@@ -86,8 +93,11 @@ func (m Mint) unsetProofsPending(proofs []cashu.Proof) error {
 	}
 	return nil
 }
-func (m Mint) LoadKeySet(id string) *crypto.KeySet {
-	return m.keySets[id]
+func (m Mint) LoadKeySet(id string) (*crypto.KeySet, error) {
+	if m.keySets[id] == nil {
+		return nil, fmt.Errorf("keyset does not exist")
+	}
+	return m.keySets[id], nil
 }
 
 var couldNotCreateClient = fmt.Errorf("could not create lightning client. Please check your configuration")
@@ -252,17 +262,24 @@ func (m Mint) Mint(messages cashu.BlindedMessages, pr string, keySet *crypto.Key
 }
 func (m Mint) MintWithoutKeySet(messages cashu.BlindedMessages, pr string) ([]cashu.BlindedSignature, error) {
 	// mint generates promises for keys. checks lightning invoice before creating promise.
-	return m.mint(messages, pr, m.LoadKeySet(m.KeySetId))
+	keyset, err := m.LoadKeySet(m.KeySetId)
+	if err != nil {
+		return nil, err
+	}
+	return m.mint(messages, pr, keyset)
 }
 
 // generatePromise will generate promise and signature for given amount using public key
 func (m *Mint) generatePromise(amount uint64, keySet *crypto.KeySet, B_ *secp256k1.PublicKey) (cashu.BlindedSignature, error) {
 	C_ := crypto.SecondStepBob(*B_, *m.keySets[keySet.Id].PrivateKeys.GetKeyByAmount(uint64(amount)).Key)
-	err := m.database.StorePromise(cashu.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
-	if err != nil {
-		return cashu.BlindedSignature{}, err
+	if m.database != nil {
+		err := m.database.StorePromise(cashu.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
+		if err != nil {
+			return cashu.BlindedSignature{}, err
+		}
 	}
-	return cashu.BlindedSignature{C_: hex.EncodeToString(C_.SerializeCompressed()), Amount: amount}, nil
+
+	return cashu.BlindedSignature{Id: keySet.Id, C_: hex.EncodeToString(C_.SerializeCompressed()), Amount: amount}, nil
 }
 
 // generatePromises will generate multiple promises and signatures
@@ -278,8 +295,8 @@ func (m *Mint) generatePromises(amounts []uint64, keySet *crypto.KeySet, keys []
 	return promises, nil
 }
 
-// verifyProof will verify proof
-func (m *Mint) verifyProof(proof cashu.Proof) error {
+// verifyProofBdhke will verify proof
+func (m *Mint) verifyProofBdhke(proof cashu.Proof) error {
 	if !m.checkSpendable(proof) {
 		return fmt.Errorf("tokens already spent. Secret: %s", proof.Secret)
 	}
@@ -299,26 +316,51 @@ func (m *Mint) verifyProof(proof cashu.Proof) error {
 	return fmt.Errorf("could not verify proofs.")
 }
 
-func verifyScript(proof cashu.Proof) (addr *btcutil.AddressScriptHash, err error) {
-	if proof.Script == nil || proof.Script.Script == "" || proof.Script.Signature == "" {
-		if cashu.IsPay2ScriptHash(proof.Secret) {
-			return nil, fmt.Errorf("secret indicates a script but no script is present")
-		} else {
-			// secret indicates no script, so treat script as valid
-			return nil, nil
+func verifyScript(proofs []cashu.Proof) (addr *btcutil.AddressScriptHash, err error) {
+
+	// verify script
+	for _, proof := range proofs {
+		if proof.Script == nil || proof.Script.Script == "" || proof.Script.Signature == "" {
+			if cashu.IsPay2ScriptHash(proof.Secret) {
+				return nil, fmt.Errorf("secret indicates a script but no script is present")
+			} else {
+				// secret indicates no script, so treat script as valid
+				return nil, nil
+			}
+		}
+		// decode payloads
+		pubScriptKey, err := base64.URLEncoding.DecodeString(proof.Script.Script)
+		if err != nil {
+			return nil, err
+		}
+		sig, err := base64.URLEncoding.DecodeString(proof.Script.Signature)
+		if err != nil {
+			return nil, err
+		}
+		addr, err := bitcoin.VerifyScript(pubScriptKey, sig)
+		if err != nil {
+			// Python test adoption
+			// this should be removed in future versions
+			switch err.Error() {
+			case "pay to script hash is not push only":
+				return nil, fmt.Errorf("('%v', EvalScriptError('EvalScript: OP_RETURN called'))", fmt.Errorf("Script evaluation failed:"))
+			case "false stack entry at end of script execution":
+				return nil, fmt.Errorf("('%v', VerifyScriptError('scriptPubKey returned false'))", fmt.Errorf("Script verification failed:"))
+			}
+			return nil, err
+		}
+		if addr != nil {
+			ss := strings.Split(proof.Secret, ":")
+			if len(ss) != 3 {
+				return nil, fmt.Errorf("script verification failed.")
+			}
+			addrs := addr.String()
+			if ss[1] != addrs {
+				return nil, fmt.Errorf("script verification failed.")
+			}
 		}
 	}
-
-	// decode payloads
-	pubScriptKey, err := base64.URLEncoding.DecodeString(proof.Script.Script)
-	if err != nil {
-		return
-	}
-	sig, err := base64.URLEncoding.DecodeString(proof.Script.Signature)
-	if err != nil {
-		return
-	}
-	return bitcoin.VerifyScript(pubScriptKey, sig)
+	return addr, nil
 }
 
 // verifyOutputs verify output data
@@ -415,6 +457,25 @@ func verifyAmount(amount uint64) (uint64, error) {
 	return amount, nil
 }
 
+func (m *Mint) verifyProofs(proofs []cashu.Proof) error {
+	// _verify_secret_criteria
+	if err := verifySecretCriteria(proofs); err != nil {
+		return err
+	}
+	// check for duplicates
+	if !verifyNoDuplicateProofs(proofs) {
+		return fmt.Errorf("duplicate proofs.")
+	}
+	// verify proofs
+	for _, proof := range proofs {
+		err := m.verifyProofBdhke(proof)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // verifyEquationBalanced verify that equation is balanced.
 func verifyEquationBalanced(proofs []cashu.Proof, outs []cashu.BlindedSignature) (bool, error) {
 	var sumInputs uint64
@@ -477,14 +538,14 @@ func (m *Mint) Melt(proofs []cashu.Proof, invoice string) (payment lightning.Pay
 	if err != nil {
 		return
 	}
-	defer m.unsetProofsPending(proofs)
+	defer m.unsetProofsPending(proofs, &err)
 	var total uint64
+
+	if err = m.verifyProofs(proofs); err != nil {
+		return nil, err
+	}
+
 	for _, proof := range proofs {
-		// verify every proof and sum total amount
-		err = m.verifyProof(proof)
-		if err != nil {
-			return nil, err
-		}
 		total += proof.Amount
 	}
 	// decode invoice and use this amount instead of melt amount
@@ -516,7 +577,7 @@ func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.Blinde
 	if err != nil {
 		return nil, nil, err
 	}
-	defer m.unsetProofsPending(proofs)
+	defer m.unsetProofsPending(proofs, &err)
 	total := lo.SumBy[cashu.Proof](proofs, func(p cashu.Proof) uint64 {
 		return p.Amount
 	})
@@ -529,50 +590,17 @@ func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.Blinde
 	if err != nil {
 		return nil, nil, err
 	}
-	// verify script
-	for _, proof := range proofs {
-		addr, err := verifyScript(proof)
-		if err != nil {
-			// Python test adoption
-			// this should be removed in future versions
-			switch err.Error() {
-			case "pay to script hash is not push only":
-				return nil, nil, fmt.Errorf("('%v', EvalScriptError('EvalScript: OP_RETURN called'))", fmt.Errorf("Script evaluation failed:"))
-			case "false stack entry at end of script execution":
-				return nil, nil, fmt.Errorf("('%v', VerifyScriptError('scriptPubKey returned false'))", fmt.Errorf("Script verification failed:"))
-			}
-			return nil, nil, err
-		}
-		if addr != nil {
-			ss := strings.Split(proof.Secret, ":")
-			if len(ss) != 3 {
-				return nil, nil, fmt.Errorf("script verification failed.")
-			}
-			addrs := addr.String()
-			if ss[1] != addrs {
-				return nil, nil, fmt.Errorf("script verification failed.")
-			}
-		}
+
+	if _, err = verifyScript(proofs); err != nil {
+		return nil, nil, err
 	}
-	// _verify_secret_criteria
-	if err = verifySecretCriteria(proofs); err != nil {
-		return nil, nil, fmt.Errorf("no secret in proof.")
-	}
-	// check for duplicates
-	if !verifyNoDuplicateProofs(proofs) {
-		return nil, nil, fmt.Errorf("duplicate proofs.")
+
+	if err = m.verifyProofs(proofs); err != nil {
+		return nil, nil, err
 	}
 	if !verifyNoDuplicateOutputs(outputs) {
 		return nil, nil, fmt.Errorf("duplicate outputs.")
 	}
-	// verify proofs
-	for _, proof := range proofs {
-		err := m.verifyProof(proof)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
 	// check outputs
 	_, err = verifyOutputs(total, amount, outputs)
 	if err != nil {
@@ -633,7 +661,7 @@ func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.Blinde
 func verifySecretCriteria(proofs []cashu.Proof) error {
 	for _, proof := range proofs {
 		if proof.Secret == "" {
-			return fmt.Errorf("secrets do not match criteria.")
+			return fmt.Errorf("no secret in proof.")
 		}
 		if len(proof.Secret) > 64 {
 			return fmt.Errorf("secret too long.")
