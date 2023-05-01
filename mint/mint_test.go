@@ -90,19 +90,23 @@ func Test_Steps(t *testing.T) {
 
 func TestMint_LoadKeySet(t *testing.T) {
 	type args struct {
-		id string
+		id   string
+		key  string
+		path string
 	}
 	tests := []struct {
 		name string
 		args args
 		want *crypto.KeySet
 	}{
-		{name: "loadKeySet"},
+		{name: "1", args: args{key: "master", path: "0/0/0/0", id: "JHV8eUnoAln/"}},
+		{name: "2", args: args{key: "TEST_PRIVATE_KEY", path: "0/0/0/0", id: "1cCNIAZ2X/w1"}},
+		{name: "3", args: args{key: "TEST_PRIVATE_KEY", path: "0/0/0/1", id: "bZJWd6IKotHO"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := New("master", WithInitialKeySet("0/0/0/0"))
-			if _, err := m.LoadKeySet("JHV8eUnoAln/"); err == nil {
+			m := New(tt.args.key, WithInitialKeySet(tt.args.path))
+			if _, err := m.LoadKeySet(tt.args.id); err == nil {
 				return
 			}
 			t.Errorf("LoadKeySet()")
