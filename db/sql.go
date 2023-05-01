@@ -79,7 +79,7 @@ func (s SqlDatabase) StoreUsedProofs(proof cashu.ProofsUsed) error {
 }
 func (s SqlDatabase) DeleteProof(proof cashu.Proof) error {
 
-	return s.db.Delete(proof).Error
+	return s.db.Where("secret = ?", proof.Secret).Delete(proof).Error
 }
 func (s SqlDatabase) ProofsUsed(in []string) []cashu.Proof {
 	proofs := make([]cashu.Proof, 0)
