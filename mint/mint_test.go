@@ -3,6 +3,7 @@ package mint
 import (
 	"bytes"
 	"fmt"
+	"github.com/cashubtc/cashu-feni/cashu"
 	"math"
 	"os"
 	"reflect"
@@ -110,6 +111,38 @@ func TestMint_LoadKeySet(t *testing.T) {
 				return
 			}
 			t.Errorf("LoadKeySet()")
+		})
+	}
+}
+
+func TestMint_Mint(t *testing.T) {
+	type args struct {
+		id   string
+		key  string
+		path string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *crypto.KeySet
+	}{
+		{name: "2", args: args{key: "TEST_PRIVATE_KEY", path: "0/0/0/0", id: "1cCNIAZ2X/w1"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := New(tt.args.key, WithInitialKeySet(tt.args.path))
+			sig, err := m.Mint(cashu.BlindedMessages{{
+				Amount: 8, B_: "02634a2c2b34bec9e8a4aba4361f6bf202d7fa2365379b0840afe249a7a9d71239",
+			}}, "", m.keySets[m.KeySetId])
+			if err != nil {
+				t.Errorf("Mint()")
+			}
+			if sig[0].Amount != 8 {
+				t.Errorf("Mint()")
+			}
+			if sig[0].C_ != "037074c4f53e326ee14ed67125f387d160e0e729351471b69ad41f7d5d21071e15" {
+				t.Errorf("Mint()")
+			}
 		})
 	}
 }

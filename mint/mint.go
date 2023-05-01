@@ -272,10 +272,13 @@ func (m Mint) MintWithoutKeySet(messages cashu.BlindedMessages, pr string) ([]ca
 // generatePromise will generate promise and signature for given amount using public key
 func (m *Mint) generatePromise(amount uint64, keySet *crypto.KeySet, B_ *secp256k1.PublicKey) (cashu.BlindedSignature, error) {
 	C_ := crypto.SecondStepBob(*B_, *m.keySets[keySet.Id].PrivateKeys.GetKeyByAmount(uint64(amount)).Key)
-	err := m.database.StorePromise(cashu.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
-	if err != nil {
-		return cashu.BlindedSignature{}, err
+	if m.database != nil {
+		err := m.database.StorePromise(cashu.Promise{Amount: amount, B_b: hex.EncodeToString(B_.SerializeCompressed()), C_c: hex.EncodeToString(C_.SerializeCompressed())})
+		if err != nil {
+			return cashu.BlindedSignature{}, err
+		}
 	}
+
 	return cashu.BlindedSignature{Id: keySet.Id, C_: hex.EncodeToString(C_.SerializeCompressed()), Amount: amount}, nil
 }
 
