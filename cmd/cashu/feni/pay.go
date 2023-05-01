@@ -16,7 +16,7 @@ func init() {
 }
 
 var payCommand = &cobra.Command{
-	Use:    "pay",
+	Use:    "pay <invoice>",
 	Short:  "Pay lightning invoice",
 	Long:   `Pay a lightning invoice using cashu tokens.`,
 	PreRun: PreRunFeni,
@@ -51,6 +51,10 @@ func ask(cmd *cobra.Command) bool {
 	return false
 }
 func pay(cmd *cobra.Command, args []string) {
+	if len(args) != 1 {
+		cmd.Help()
+		return
+	}
 	invoice := args[0]
 	fee, err := Wallet.client.CheckFee(cashu.CheckFeesRequest{Pr: invoice})
 	if err != nil {

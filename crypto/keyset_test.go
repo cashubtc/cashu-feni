@@ -62,7 +62,7 @@ func TestNewKeySet(t *testing.T) {
 		args args
 		want *KeySet
 	}{
-		{name: "NewKeySet", args: args{masterKey: "master", derivationPath: "0/0/0/0"}},
+		{name: "NewKeySet", args: args{masterKey: "master", derivationPath: "0/0/0/0"}, want: &KeySet{Id: "JHV8eUnoAln/"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -71,7 +71,7 @@ func TestNewKeySet(t *testing.T) {
 				t.Errorf("invalid keysets, got: %d", len(got.PublicKeys))
 			}
 			// due to different result on github action
-			if got.Id == "JHV8eUnoAln/" {
+			if got.Id == tt.want.Id {
 				return
 			}
 			t.Errorf("invalid id, got: %s", got.Id)
