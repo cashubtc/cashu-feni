@@ -5,9 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
-  "math/bits"
+	"math/bits"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/btcsuite/btcd/btcutil"
@@ -430,7 +429,7 @@ func AmountSplit(amount uint64) []uint64 {
 	rv := make([]uint64, 0)
 	for i := 0; i < bits.Len64(amount); i++ {
 		if (amount & (1 << i)) != 0 { // if bit i is set, add 2**i to list
-			rv = append(rv, 1 << i)
+			rv = append(rv, 1<<i)
 		}
 	}
 	return rv
