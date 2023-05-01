@@ -4,6 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
+	"net/url"
+	"time"
+
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/db"
@@ -13,9 +17,6 @@ import (
 	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/exp/slices"
-	"math/rand"
-	"net/url"
-	"time"
 )
 
 type Pair[T, U any] struct {
@@ -259,7 +260,7 @@ func (w MintWallet) getKeySet(id string) (crypto.KeySet, error) {
 		return k.Id == id
 	})
 	if !found {
-		return k, fmt.Errorf("keyset not found")
+		return k, fmt.Errorf("keyset does not exist")
 	}
 	return k, nil
 }

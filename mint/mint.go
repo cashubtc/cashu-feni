@@ -87,8 +87,11 @@ func (m Mint) unsetProofsPending(proofs []cashu.Proof) error {
 	}
 	return nil
 }
-func (m Mint) LoadKeySet(id string) *crypto.KeySet {
-	return m.keySets[id]
+func (m Mint) LoadKeySet(id string) (*crypto.KeySet, error) {
+	if m.keySets[id] == nil {
+		return nil, fmt.Errorf("keyset does not exist")
+	}
+	return m.keySets[id], nil
 }
 
 var couldNotCreateClient = fmt.Errorf("could not create lightning client. Please check your configuration")
@@ -253,7 +256,11 @@ func (m Mint) Mint(messages cashu.BlindedMessages, pr string, keySet *crypto.Key
 }
 func (m Mint) MintWithoutKeySet(messages cashu.BlindedMessages, pr string) ([]cashu.BlindedSignature, error) {
 	// mint generates promises for keys. checks lightning invoice before creating promise.
-	return m.mint(messages, pr, m.LoadKeySet(m.KeySetId))
+	keyset, err := m.LoadKeySet(m.KeySetId)
+	if err != nil {
+		return nil, err
+	}
+	return m.mint(messages, pr, keyset)
 }
 
 // generatePromise will generate promise and signature for given amount using public key

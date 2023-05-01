@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/db"
@@ -11,11 +17,6 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	httpSwagger "github.com/swaggo/http-swagger"
-	"io"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -314,7 +315,12 @@ func (api Api) getKeysByKeySet(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	keysetId := vars["id"]
 	keysetId = strings.ReplaceAll(strings.ReplaceAll(keysetId, "_", "/"), "-", "+")
-	key, err := json.Marshal(crypto.GetKeySetPublicKeys(api.Mint.LoadKeySet(keysetId)))
+	keyset, err := api.Mint.LoadKeySet(keysetId)
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
+	key, err := json.Marshal(crypto.GetKeySetPublicKeys(keyset))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -404,7 +410,12 @@ func (api Api) split(w http.ResponseWriter, r *http.Request) {
 	proofs := payload.Proofs
 	amount := payload.Amount
 	outputs := payload.Outputs
-	fstPromise, sendPromise, err := api.Mint.Split(proofs, amount, outputs, api.Mint.LoadKeySet(api.Mint.KeySetId))
+	keyset, err := api.Mint.LoadKeySet(api.Mint.KeySetId)
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
+	fstPromise, sendPromise, err := api.Mint.Split(proofs, amount, outputs, keyset)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
