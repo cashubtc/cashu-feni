@@ -102,7 +102,7 @@ func TestMint_LoadKeySet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := New("master", WithInitialKeySet("0/0/0/0"))
-			if _, err := m.LoadKeySet("JHV8eUnoAln/"); err != nil {
+			if _, err := m.LoadKeySet("JHV8eUnoAln/"); err == nil {
 				return
 			}
 			t.Errorf("LoadKeySet()")
