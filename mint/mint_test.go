@@ -3,15 +3,16 @@ package mint
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"os"
+	"reflect"
+	"testing"
+
 	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/cashubtc/cashu-feni/db"
 	"github.com/cashubtc/cashu-feni/lightning"
 	"github.com/cashubtc/cashu-feni/lightning/invoice"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"math"
-	"os"
-	"reflect"
-	"testing"
 )
 
 func Test_amountSplit(t *testing.T) {
@@ -101,7 +102,7 @@ func TestMint_LoadKeySet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := New("master", WithInitialKeySet("0/0/0/0"))
-			if m.LoadKeySet("JHV8eUnoAln/") != nil {
+			if _, err := m.LoadKeySet("JHV8eUnoAln/"); err != nil {
 				return
 			}
 			t.Errorf("LoadKeySet()")
