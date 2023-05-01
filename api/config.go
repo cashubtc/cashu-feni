@@ -52,7 +52,7 @@ func (c Configuration) Load() error {
 		Config.Mint.Host = *host
 		Config.Mint.Port = *port
 
-		Config.Mint.PrivateKey = "privatekeyofthemint"
+		Config.Mint.PrivateKey = "supersecretprivatekey"
 		Config.Mint.DerivationPath = "0/0/0/0"
 		Config.LogLevel = "trace"
 		Config.DocReference = "http://0.0.0.0:3338/swagger/doc.json"
