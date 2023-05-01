@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
+  "math/bits"
 	"reflect"
 	"strconv"
 	"strings"
@@ -423,25 +424,16 @@ func (m *Mint) checkSpendable(proof cashu.Proof) bool {
 	return !found
 }
 
-// AmountSplit will convert amount into binary and return array with decimal binary values
+// AmountSplit will return an array with all decimal binary values (i.e. powers
+// of two) that the given amount consists of.
 func AmountSplit(amount uint64) []uint64 {
-	bin := reverse(strconv.FormatUint(amount, 2))
 	rv := make([]uint64, 0)
-	for i, b := range []byte(bin) {
-		if b == 49 {
-			rv = append(rv, uint64(math.Pow(2, float64(i))))
+	for i := 0; i < bits.Len64(amount); i++ {
+		if (amount & (1 << i)) != 0 { // if bit i is set, add 2**i to list
+			rv = append(rv, 1 << i)
 		}
 	}
 	return rv
-}
-
-// reverse string. used to reverse binary representation of amount
-func reverse(s string) string {
-	runes := []rune(s)
-	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-		runes[i], runes[j] = runes[j], runes[i]
-	}
-	return string(runes)
 }
 
 // verifySplitAmount will verify amount
