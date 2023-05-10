@@ -140,8 +140,8 @@ type GetKeySetsResponse struct {
 	KeySets []string `json:"keysets"`
 }
 type GetMintResponse struct {
-	Pr   string
-	Hash string
+	Pr   string `json:"pr"`
+	Hash string `json:"hash"`
 }
 
 type MeltRequest struct {

@@ -1,6 +1,7 @@
 package mint
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -27,19 +28,24 @@ type Mint struct {
 	// proofsUsed list of all proofs ever used
 	proofsUsed []string
 	// masterKey used to derive mints private key
-	masterKey string
-	keySets   map[string]*crypto.KeySet
-	KeySetId  string
-	database  db.MintStorage
-	client    lightning.Client
+	masterKey    string
+	MasterSha526 string
+	keySets      map[string]*crypto.KeySet
+	KeySetId     string
+	database     db.MintStorage
+	client       lightning.Client
 }
 
 // New creates a new ledger and derives keys
 func New(masterKey string, opt ...Options) *Mint {
+	h := sha256.New()
+	h.Write([]byte(masterKey))
+
 	l := &Mint{
-		masterKey:  masterKey,
-		proofsUsed: make([]string, 0),
-		keySets:    make(map[string]*crypto.KeySet, 0),
+		masterKey:    masterKey,
+		MasterSha526: fmt.Sprintf("%x", h.Sum(nil)),
+		proofsUsed:   make([]string, 0),
+		keySets:      make(map[string]*crypto.KeySet, 0),
 	}
 	// apply ledger options
 	for _, o := range opt {

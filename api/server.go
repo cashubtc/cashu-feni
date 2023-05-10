@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -191,7 +192,12 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.WithField("invoice", invoice).Infof("created lightning invoice")
-	_, err = fmt.Fprintf(w, `{"pr": "%s", "hash": "%s"}`, invoice.GetPaymentRequest(), invoice.GetHash())
+	hash, err := crypto.EncryptAESGCM([]byte(api.Mint.MasterSha526), []byte(invoice.GetHash()))
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
+	_, err = fmt.Fprintf(w, `{"pr": "%s", "hash": "%x"}`, invoice.GetPaymentRequest(), hash)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
@@ -218,15 +224,36 @@ func (api Api) getMint(w http.ResponseWriter, r *http.Request) {
 // @Param        payment_hash    query     string  false  "payment hash for the mint"
 // @Tags POST
 func (api Api) mint(w http.ResponseWriter, r *http.Request) {
-	pr := r.URL.Query().Get("payment_hash")
+	var pr []byte
+	var err error
+	hash := r.URL.Query().Get("hash")
+	if len(hash) == 0 {
+		hash = r.URL.Query().Get("payment_hash")
+		if len(hash) == 0 {
+			responseError(w, cashu.NewErrorResponse(fmt.Errorf("invalid hash parameter")))
+			return
+		}
+	}
+
+	decodedHash, err := hex.DecodeString(hash)
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
+	pr, err = crypto.DecryptAESGCM([]byte(api.Mint.MasterSha526), decodedHash)
+	if err != nil {
+		responseError(w, cashu.NewErrorResponse(err))
+		return
+	}
+
 	mintRequest := cashu.MintRequest{Outputs: make(cashu.BlindedMessages, 0)}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&mintRequest)
+	err = decoder.Decode(&mintRequest)
 	if err != nil {
 		panic(err)
 	}
 
-	promises, err := api.Mint.MintWithoutKeySet(mintRequest.Outputs, pr)
+	promises, err := api.Mint.MintWithoutKeySet(mintRequest.Outputs, string(pr))
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
