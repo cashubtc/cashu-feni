@@ -25,6 +25,7 @@ require (
 	github.com/swaggo/http-swagger v1.3.3
 	github.com/swaggo/swag v1.8.6
 	go.elastic.co/ecslogrus v1.0.0
+	golang.org/x/exp v0.0.0-20220426173459-3bcf042a4bf5
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gorm.io/driver/sqlite v1.3.6
 	gorm.io/gorm v1.23.10
@@ -84,7 +85,6 @@ require (
 	go.etcd.io/etcd/client/v2 v2.305.4 // indirect
 	go.etcd.io/etcd/client/v3 v3.5.4 // indirect
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
-	golang.org/x/exp v0.0.0-20220426173459-3bcf042a4bf5 // indirect
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect

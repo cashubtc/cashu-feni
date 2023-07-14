@@ -3,9 +3,8 @@ package feni
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"github.com/cashubtc/cashu-feni/cashu"
-	"github.com/cashubtc/cashu-feni/crypto"
-	"github.com/samber/lo"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"strings"
@@ -25,10 +24,47 @@ var receiveCommand = &cobra.Command{
 	Run:    receive,
 }
 
-type Token struct {
-	Proofs []cashu.Proof `json:"proofs"`
-	Mints  Mints         `json:"mints"`
+type Tokens struct {
+	Token []Token `json:"token"`
+	Memo  string  `json:"memo"`
 }
+type Proofs struct {
+	ID     string `json:"id"`
+	Amount int    `json:"amount"`
+	Secret string `json:"secret"`
+	C      string `json:"C"`
+}
+type Token struct {
+	Mint   string        `json:"mint"`
+	Proofs []cashu.Proof `json:"proofs"`
+}
+
+func (t Tokens) String() string {
+	tokenBytes, err := json.Marshal(t)
+	if err != nil {
+		panic(err)
+	}
+
+	encodedToken := base64.URLEncoding.EncodeToString(tokenBytes)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return fmt.Sprintf("cashuA%s", encodedToken)
+}
+
+func NewTokens(t string) *Tokens {
+	token := &Tokens{}
+	decodedCoin, err := base64.URLEncoding.DecodeString(t[len("cashuA"):])
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = json.Unmarshal(decodedCoin, &token)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return token
+}
+
 type Mint struct {
 	URL string   `json:"url"`
 	Ks  []string `json:"ks"`
@@ -53,42 +89,29 @@ func receive(cmd *cobra.Command, args []string) {
 		script = p2shScripts[0].Script
 		signature = p2shScripts[0].Signature
 	}
-	token := Token{}
-	decodedCoin, err := base64.URLEncoding.DecodeString(coin)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = json.Unmarshal(decodedCoin, &token)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if len(token.Mints) == 0 {
-		_, _, err = Wallet.redeem(token.Proofs, script, signature)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return
-	}
-	trust := verifyMints(*cmd, token)
+	tokens := NewTokens(coin)
+
+	/*trust := verifyMints(*cmd, tokens)
 	if !trust {
 		log.Fatal("Aborted!")
-	}
-	defaultUrl := Wallet.client.Url
-	defer func() {
-		Wallet.client.Url = defaultUrl
-	}()
-	for _, mint := range token.Mints {
-		Wallet.client.Url = mint.URL
-		_, _, err = Wallet.redeem(token.Proofs, script, signature)
+	}*/
+	for _, token := range tokens.Token {
+		defaultUrl := Wallet.client.Url
+		defer func() {
+			Wallet.client.Url = defaultUrl
+		}()
+		Wallet.client.Url = token.Mint
+		_, _, err := Wallet.redeem(token.Proofs, script, signature)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 }
 
-func verifyMints(cmd cobra.Command, token Token) (trust bool) {
+/*
+func verifyMints(cmd cobra.Command, token Tokens) (trust bool) {
 	trust = true
-	for _, m := range token.Mints {
+	for _, m := range token.Token {
 		_, exists := lo.Find[crypto.KeySet](Wallet.keySets, func(s crypto.KeySet) bool {
 			for _, k := range m.Ks {
 				if k == s.Id {
@@ -102,7 +125,7 @@ func verifyMints(cmd cobra.Command, token Token) (trust bool) {
 		}
 		trust = false
 		u := Wallet.client.Url
-		Wallet.client.Url = m.URL
+		Wallet.client.Url = m.Mint
 		// fetch unknown keysets from mint
 		wks, err := Wallet.client.KeySets()
 		if err != nil {
@@ -136,3 +159,4 @@ func verifyMints(cmd cobra.Command, token Token) (trust bool) {
 	}
 	return
 }
+*/
