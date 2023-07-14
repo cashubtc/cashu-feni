@@ -29,8 +29,8 @@ type Proof struct {
 	Amount       uint64      `json:"amount"`
 	Secret       string      `json:"secret" gorm:"primaryKey"`
 	C            string      `json:"C"`
-	Status       ProofStatus `json:"status"`
-	Reserved     bool        `json:"reserved,omitempty"`
+	Status       ProofStatus `json:"-"`
+	Reserved     bool        `json:"-,omitempty"`
 	Script       *P2SHScript `gorm:"-" json:"script,omitempty" structs:"Script,omitempty"`
 	SendId       uuid.UUID   `json:"-,omitempty" structs:"SendId,omitempty"`
 	TimeCreated  time.Time   `json:"-,omitempty" structs:"TimeCreated,omitempty"`

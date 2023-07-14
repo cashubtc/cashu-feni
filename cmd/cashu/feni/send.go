@@ -2,13 +2,10 @@ package feni
 
 import (
 	"bytes"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"github.com/c-bata/go-prompt"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/crypto"
-	"github.com/cashubtc/cashu-feni/db"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"strconv"
@@ -135,7 +132,7 @@ func send(cmd *cobra.Command, args []string) {
 	if lockFlag != "" && !p2sh {
 		hide = true
 	}
-	token, err := serializeToken(sendProofs, hide)
+	token, err := Wallet.serializeToken(sendProofs, hide)
 	if err != nil {
 		panic(err)
 	}
@@ -146,40 +143,18 @@ func send(cmd *cobra.Command, args []string) {
 // If the hideSecrets flag is set to true, the Secret field of each proof will be set to an empty string before serialization.
 // The serialized data is returned as a base64-encoded string.
 // If an error occurs, the empty string is returned as the result and an error is returned as the second return value.
-func serializeToken(proofs []cashu.Proof, hideSecrets bool) (string, error) {
+func (w MintWallet) serializeToken(proofs []cashu.Proof, hideSecrets bool) (string, error) {
 	// Create a new Token structure with the given proofs and an empty Mints map.
-	token := Token{Proofs: proofs, Mints: Mints{}}
-
+	token := Tokens{Token: make([]Token, 0)}
+	token.Token = append(token.Token, Token{Proofs: proofs, Mint: w.client.Url})
 	// Iterate over each proof in the `proofs` slice.
 	for i := range proofs {
 		// If `hideSecrets` is true, set the `Secret` field of the current proof to an empty string.
 		if hideSecrets {
 			proofs[i].Secret = ""
 		}
-
-		// Try to find a `crypto.KeySet` structure in the `Wallet.keySets` slice that has the same `Id` as the current proof.
-		keyset, ok := lo.Find[crypto.KeySet](Wallet.keySets, func(k crypto.KeySet) bool {
-			return k.Id == proofs[i].Id
-		})
-		// If a matching `crypto.KeySet` was not found, return an error.
-		if !ok {
-			return "", fmt.Errorf("error finding keyset")
-		}
-		if _, ok := token.Mints[keyset.Id]; !ok {
-			ks, err := storage.GetKeySet(db.KeySetWithId(proofs[i].Id))
-			if err != nil {
-				return "", err
-			}
-			token.Mints[keyset.MintUrl] = Mint{URL: ks[0].MintUrl, Ks: []string{keyset.Id}}
-		}
-	}
-	// Marshal the `token` structure as a JSON string.
-	jsonProofs, err := json.Marshal(token)
-	// If an error occurred while marshaling the JSON, return the error.
-	if err != nil {
-		return "", err
 	}
 	// Return the base64-encoded version of the JSON string.
-	return base64.URLEncoding.EncodeToString(jsonProofs), nil
+	return token.String(), nil
 
 }
