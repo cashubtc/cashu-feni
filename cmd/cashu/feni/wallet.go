@@ -48,7 +48,7 @@ var Wallet MintWallet
 // constructOutputs takes in a slice of amounts and a slice of secrets, and
 // constructs a MintRequest with blinded messages and a slice of private keys
 // corresponding to the given amounts and secrets.
-func constructOutputs(amounts []uint64, secrets []string) (cashu.MintRequest, []*secp256k1.PrivateKey) {
+func constructOutputs(amounts []uint64, secrets []string) (cashu.BlindedMessages, []*secp256k1.PrivateKey) {
 	// Create a new empty MintRequest with a slice of blinded messages.
 	payloads := cashu.MintRequest{Outputs: make(cashu.BlindedMessages, 0)}
 	// Create an empty slice of private keys.
@@ -70,7 +70,7 @@ func constructOutputs(amounts []uint64, secrets []string) (cashu.MintRequest, []
 			cashu.BlindedMessage{Amount: pair.Second, B_: fmt.Sprintf("%x", pub.SerializeCompressed())})
 	}
 	// Return the MintRequest and the slice of private keys.
-	return payloads, privateKeys
+	return payloads.Outputs, privateKeys
 }
 
 func (w MintWallet) checkUsedSecrets(amounts []uint64, secrets []string) error {
@@ -117,8 +117,8 @@ func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 	if err != nil {
 		panic(err)
 	}
-	req, privateKeys := constructOutputs(amounts, secrets)
-	blindedSignatures, err := w.client.Mint(req, paymentHash)
+	outputs, privateKeys := constructOutputs(amounts, secrets)
+	blindedSignatures, err := w.client.Mint(cashu.MintRequest{Outputs: outputs}, paymentHash)
 	if err != nil {
 		panic(err)
 	}
@@ -240,8 +240,8 @@ func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) ([]cashu.
 	for i := 0; i < 4; i++ {
 		secrets = append(secrets, generateSecret())
 	}
-	payloads, rs := constructOutputs(amounts, secrets)
-	res, err := w.client.Melt(cashu.MeltRequest{Proofs: proofs, Pr: invoice, Outputs: payloads.Outputs})
+	outputs, rs := constructOutputs(amounts, secrets)
+	res, err := w.client.Melt(cashu.MeltRequest{Proofs: proofs, Pr: invoice, Outputs: outputs})
 	if err != nil {
 		return nil, err
 	}
@@ -332,46 +332,17 @@ func (w *MintWallet) Split(proofs []cashu.Proof, amount uint64, scndSecret strin
 	if len(proofs) < 0 {
 		return nil, nil, fmt.Errorf("no proofs provided.")
 	}
-	frstProofs, scndProofs, err := w.split(proofs, amount, scndSecret)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(frstProofs) == 0 && len(scndProofs) == 0 {
-		return nil, nil, fmt.Errorf("received no splits.")
-	}
-	usedSecrets := make([]string, 0)
-	for _, proof := range proofs {
-		usedSecrets = append(usedSecrets, proof.Secret)
-	}
-	w.proofs = lo.Filter[cashu.Proof](w.proofs, func(p cashu.Proof, i int) bool {
-		_, found := lo.Find[string](usedSecrets, func(secret string) bool {
-			return secret == p.Secret
-		})
-		return !found
-	})
-	w.proofs = append(w.proofs, frstProofs...)
-	w.proofs = append(w.proofs, scndProofs...)
-	err = storeProofs(append(frstProofs, scndProofs...))
-	if err != nil {
-		return nil, nil, err
-	}
-	for _, proof := range proofs {
-		err = invalidateProof(proof)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	return frstProofs, scndProofs, nil
-}
-func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string) (keep []cashu.Proof, send []cashu.Proof, err error) {
-
 	total := SumProofs(proofs)
+	if amount > total {
+		return nil, nil, fmt.Errorf("amount too large")
+	}
 	frstAmt := total - amount
 	scndAmt := amount
 	frstOutputs := mint.AmountSplit(frstAmt)
 	scndOutputs := mint.AmountSplit(scndAmt)
 	amounts := append(frstOutputs, scndOutputs...)
 	secrets := make([]string, 0)
+
 	if scndSecret == "" {
 		for range amounts {
 			secrets = append(secrets, generateSecret())
@@ -390,14 +361,48 @@ func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string
 		return nil, nil, fmt.Errorf("number of secrets does not match number of outputs")
 	}
 	// TODO -- check used secrets(secrtes)
-	payloads, rs := constructOutputs(amounts, secrets)
-	response, err := w.client.Split(cashu.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.Outputs})
+	outputs, rs := constructOutputs(amounts, secrets)
+
+	promises, err := w.split(proofs, outputs)
 	if err != nil {
 		return nil, nil, err
 	}
+	newProofs := w.constructProofs(promises, secrets, rs)
 
-	return w.constructProofs(response.Fst, secrets[:len(response.Fst)], rs[:len(response.Fst)]),
-		w.constructProofs(response.Snd, secrets[len(response.Fst):], rs[len(response.Fst):]), nil
+	usedSecrets := make([]string, 0)
+	for _, proof := range newProofs {
+		usedSecrets = append(usedSecrets, proof.Secret)
+	}
+	w.proofs = lo.Filter[cashu.Proof](w.proofs, func(p cashu.Proof, i int) bool {
+		_, found := lo.Find[string](usedSecrets, func(secret string) bool {
+			return secret == p.Secret
+		})
+		return !found
+	})
+	w.proofs = append(w.proofs, newProofs...)
+	err = storeProofs(newProofs)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, proof := range proofs {
+		err = invalidateProof(proof)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	keepProofs := newProofs[:len(frstOutputs)]
+	sendProofs := newProofs[len(frstOutputs):]
+	return keepProofs, sendProofs, nil
+}
+func (w MintWallet) split(proofs []cashu.Proof, outputs cashu.BlindedMessages) (keep []cashu.BlindedSignature, err error) {
+	response, err := w.client.Split(cashu.SplitRequest{Proofs: proofs, Outputs: outputs})
+	if err != nil {
+		return nil, err
+	}
+	if len(response.Promises) == 0 {
+		return nil, fmt.Errorf("received no splits.")
+	}
+	return response.Promises, nil
 }
 
 func SumProofs(p []cashu.Proof) uint64 {
