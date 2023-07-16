@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 	"math/bits"
-	"reflect"
 	"strings"
 
 	"github.com/btcsuite/btcd/btcutil"
@@ -289,10 +288,19 @@ func (m *Mint) generatePromise(amount uint64, keySet *crypto.KeySet, B_ *secp256
 }
 
 // generatePromises will generate multiple promises and signatures
-func (m *Mint) generatePromises(amounts []uint64, keySet *crypto.KeySet, keys []*secp256k1.PublicKey) ([]cashu.BlindedSignature, error) {
+func (m *Mint) generatePromises(keySet *crypto.KeySet, outputs cashu.BlindedMessages) ([]cashu.BlindedSignature, error) {
+	// create first outputs and second outputs
 	promises := make([]cashu.BlindedSignature, 0)
-	for i, key := range keys {
-		p, err := m.generatePromise(amounts[i], keySet, key)
+	for _, output := range outputs {
+		b, err := hex.DecodeString(output.B_)
+		if err != nil {
+			return nil, err
+		}
+		B, err := secp256k1.ParsePubKey(b)
+		if err != nil {
+			return nil, err
+		}
+		p, err := m.generatePromise(output.Amount, keySet, B)
 		if err != nil {
 			return nil, err
 		}
@@ -368,19 +376,6 @@ func verifyScript(proofs []cashu.Proof) (addr *btcutil.AddressScriptHash, err er
 	}
 	return addr, nil
 }
-
-// verifyOutputs verify output data
-func verifyOutputs(total, amount uint64, outputs []cashu.BlindedMessage) (bool, error) {
-	fstAmt, sndAmt := total-amount, amount
-	fstOutputs := AmountSplit(fstAmt)
-	sndOutputs := AmountSplit(sndAmt)
-	expected := append(fstOutputs, sndOutputs...)
-	given := make([]uint64, 0)
-	for _, o := range outputs {
-		given = append(given, o.Amount)
-	}
-	return reflect.DeepEqual(given, expected), nil
-}
 func verifyNoDuplicateProofs(proofs []cashu.Proof) bool {
 	secrets := make([]string, 0)
 	for _, proof := range proofs {
@@ -441,11 +436,6 @@ func AmountSplit(amount uint64) []uint64 {
 	return rv
 }
 
-// verifySplitAmount will verify amount
-func verifySplitAmount(amount uint64) (uint64, error) {
-	return verifyAmount(amount)
-}
-
 // verifyAmount make sure that amount is bigger than zero and smaller than 2^MaxOrder
 func verifyAmount(amount uint64) (uint64, error) {
 	if amount < 0 || amount > uint64(math.Pow(2, crypto.MaxOrder)) {
@@ -455,6 +445,10 @@ func verifyAmount(amount uint64) (uint64, error) {
 }
 
 func (m *Mint) verifyProofs(proofs []cashu.Proof) error {
+
+	if _, err := verifyScript(proofs); err != nil {
+		return err
+	}
 	// _verify_secret_criteria
 	if err := verifySecretCriteria(proofs); err != nil {
 		return err
@@ -569,89 +563,51 @@ func (m *Mint) Melt(proofs []cashu.Proof, invoice string) (payment lightning.Pay
 }
 
 // split will split proofs. creates BlindedSignatures from BlindedMessages.
-func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.BlindedMessage, keySet *crypto.KeySet) ([]cashu.BlindedSignature, []cashu.BlindedSignature, error) {
+func (m *Mint) Split(proofs []cashu.Proof, outputs []cashu.BlindedMessage, keySet *crypto.KeySet) ([]cashu.BlindedSignature, error) {
 	err := m.setProofsPending(proofs)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer m.unsetProofsPending(proofs, &err)
 	total := lo.SumBy[cashu.Proof](proofs, func(p cashu.Proof) uint64 {
 		return p.Amount
 	})
-	if amount > total {
-		return nil, nil, fmt.Errorf("split amount is higher than the total sum.")
-	}
 	// verifySplitAmount
-	amount, err = verifySplitAmount(amount)
-
+	total, err = verifyAmount(total)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	if _, err = verifyScript(proofs); err != nil {
-		return nil, nil, err
+	outputAmount := lo.SumBy[cashu.BlindedMessage](outputs, func(t cashu.BlindedMessage) uint64 {
+		return t.Amount
+	})
+	if outputAmount > total {
+		return nil, fmt.Errorf("inputs do not have the same amount as outputs")
 	}
 
 	if err = m.verifyProofs(proofs); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if !verifyNoDuplicateOutputs(outputs) {
-		return nil, nil, fmt.Errorf("duplicate outputs.")
+		return nil, fmt.Errorf("duplicate outputs.")
 	}
 	// check outputs
-	_, err = verifyOutputs(total, amount, outputs)
-	if err != nil {
-		return nil, nil, err
-	}
 	// invalidate proofs
 	err = m.invalidateProofs(proofs)
 	if err != nil {
-		return nil, nil, err
-	}
-	// create first outputs and second outputs
-	outsFts := AmountSplit(total - amount)
-	outsSnd := AmountSplit(amount)
-	B_fst := make([]*secp256k1.PublicKey, 0)
-	B_snd := make([]*secp256k1.PublicKey, 0)
-	for _, data := range outputs[:len(outsFts)] {
-		b, err := hex.DecodeString(data.B_)
-		if err != nil {
-			return nil, nil, err
-		}
-		key, err := secp256k1.ParsePubKey(b)
-		if err != nil {
-			return nil, nil, err
-		}
-		B_fst = append(B_fst, key)
+		return nil, err
 	}
 
-	for _, data := range outputs[len(outsFts):] {
-		b, err := hex.DecodeString(data.B_)
-		if err != nil {
-			return nil, nil, err
-		}
-		key, err := secp256k1.ParsePubKey(b)
-		if err != nil {
-			return nil, nil, err
-		}
-		B_snd = append(B_snd, key)
-	}
 	// create promises for outputs
-	fstPromise, err := m.generatePromises(outsFts, keySet, B_fst)
+	promises, err := m.generatePromises(keySet, outputs)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	sendPromise, err := m.generatePromises(outsSnd, keySet, B_snd)
-	if err != nil {
-		return nil, nil, err
-	}
-	outs := append(fstPromise, sendPromise...)
 	// check eq is balanced
-	_, err = verifyEquationBalanced(proofs, outs)
+	_, err = verifyEquationBalanced(proofs, promises)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return fstPromise, sendPromise, nil
+	return promises, nil
 }
 
 // verifySecretCriteria verifies that a secret is present and is not too long (DOS prevention).

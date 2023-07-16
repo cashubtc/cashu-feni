@@ -435,19 +435,18 @@ func (api Api) split(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	proofs := payload.Proofs
-	amount := payload.Amount
 	outputs := payload.Outputs
 	keyset, err := api.Mint.LoadKeySet(api.Mint.KeySetId)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	fstPromise, sendPromise, err := api.Mint.Split(proofs, amount, outputs, keyset)
+	promises, err := api.Mint.Split(proofs, outputs, keyset)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))
 		return
 	}
-	response := cashu.SplitResponse{Fst: fstPromise, Snd: sendPromise}
+	response := cashu.SplitResponse{Promises: promises}
 	res, err := json.Marshal(response)
 	if err != nil {
 		responseError(w, cashu.NewErrorResponse(err))

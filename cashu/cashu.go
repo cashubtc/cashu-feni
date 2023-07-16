@@ -132,10 +132,6 @@ type MeltResponse struct {
 	Change   []BlindedSignature `json:"change,omitempty"`
 }
 type GetKeysResponse map[int]string
-type SplitResponse struct {
-	Fst []BlindedSignature `json:"fst"`
-	Snd []BlindedSignature `json:"snd"`
-}
 type GetKeySetsResponse struct {
 	KeySets []string `json:"keysets"`
 }
@@ -165,6 +161,8 @@ type CheckFeesRequest struct {
 
 type SplitRequest struct {
 	Proofs  Proofs           `json:"proofs"`
-	Amount  uint64           `json:"amount"`
 	Outputs []BlindedMessage `json:"outputs"`
+}
+type SplitResponse struct {
+	Promises []BlindedSignature `json:"promises"`
 }
