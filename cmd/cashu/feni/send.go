@@ -77,7 +77,7 @@ func askMintSelection(cmd *cobra.Command) error {
 		cmd.Printf("Mint: %d Balance: %d sat (available: %d) URL: %s\n", i+1, setBalance[set.MintUrl], setBalanceAvailable[set.MintUrl], set.MintUrl)
 	}
 	cmd.Printf("Select mint [1-%d, press enter default 1]\n\n", len(filteredKeySets))
-	Wallet.client.Url = filteredKeySets[askInt(cmd)-1].MintUrl
+	Wallet.Client.Url = filteredKeySets[askInt(cmd)-1].MintUrl
 	Wallet.loadDefaultMint()
 	return nil
 }
@@ -118,7 +118,7 @@ func send(cmd *cobra.Command, args []string) {
 		p2sh = true
 	}
 	mint, _ := strconv.Atoi(args[1])
-	Wallet.client.Url = filteredKeySets[mint].MintUrl
+	Wallet.Client.Url = filteredKeySets[mint].MintUrl
 	Wallet.loadDefaultMint()
 	amount, err := strconv.Atoi(args[0])
 	if err != nil {
@@ -146,7 +146,7 @@ func send(cmd *cobra.Command, args []string) {
 func (w MintWallet) serializeToken(proofs []cashu.Proof, hideSecrets bool) (string, error) {
 	// Create a new Token structure with the given proofs and an empty Mints map.
 	token := Tokens{Token: make([]Token, 0)}
-	token.Token = append(token.Token, Token{Proofs: proofs, Mint: w.client.Url})
+	token.Token = append(token.Token, Token{Proofs: proofs, Mint: w.Client.Url})
 	// Iterate over each proof in the `proofs` slice.
 	for i := range proofs {
 		// If `hideSecrets` is true, set the `Secret` field of the current proof to an empty string.

@@ -56,7 +56,7 @@ func pay(cmd *cobra.Command, args []string) {
 		return
 	}
 	invoice := args[0]
-	fee, err := Wallet.client.CheckFee(cashu.CheckFeesRequest{Pr: invoice})
+	fee, err := Wallet.Client.CheckFee(cashu.CheckFeesRequest{Pr: invoice})
 	if err != nil {
 		log.Fatal(err)
 	}

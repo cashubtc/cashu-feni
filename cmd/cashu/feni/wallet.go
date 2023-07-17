@@ -40,7 +40,7 @@ type MintWallet struct {
 	keySets       []crypto.KeySet // current keySet id from mint server.
 	proofs        []cashu.Proof
 	currentKeySet *crypto.KeySet
-	client        *Client
+	Client        *Client
 }
 
 var Wallet MintWallet
@@ -118,7 +118,7 @@ func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 		panic(err)
 	}
 	req, privateKeys := constructOutputs(amounts, secrets)
-	blindedSignatures, err := w.client.Mint(req, paymentHash)
+	blindedSignatures, err := w.Client.Mint(req, paymentHash)
 	if err != nil {
 		panic(err)
 	}
@@ -241,7 +241,7 @@ func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) ([]cashu.
 		secrets = append(secrets, generateSecret())
 	}
 	payloads, rs := constructOutputs(amounts, secrets)
-	res, err := w.client.Melt(cashu.MeltRequest{Proofs: proofs, Pr: invoice, Outputs: payloads.Outputs})
+	res, err := w.Client.Melt(cashu.MeltRequest{Proofs: proofs, Pr: invoice, Outputs: payloads.Outputs})
 	if err != nil {
 		return nil, err
 	}
@@ -391,7 +391,7 @@ func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string
 	}
 	// TODO -- check used secrets(secrtes)
 	payloads, rs := constructOutputs(amounts, secrets)
-	response, err := w.client.Split(cashu.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.Outputs})
+	response, err := w.Client.Split(cashu.SplitRequest{Amount: amount, Proofs: proofs, Outputs: payloads.Outputs})
 	if err != nil {
 		return nil, nil, err
 	}

@@ -65,7 +65,7 @@ func StartClientConfiguration() {
 
 	Wallet = MintWallet{
 		proofs: make([]cashu.Proof, 0),
-		client: &Client{Url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)},
+		Client: &Client{Url: fmt.Sprintf("%s:%s", Config.MintServerHost, Config.MintServerPort)},
 	}
 
 	Wallet.loadDefaultMint()
@@ -82,7 +82,7 @@ func (w *MintWallet) loadMint(keySetId string) {
 			w.currentKeySet = &set
 		}
 	}
-	w.client.Url = w.currentKeySet.MintUrl
+	w.Client.Url = w.currentKeySet.MintUrl
 	w.loadDefaultMint()
 }
 func (w *MintWallet) setCurrentKeySet(keySet crypto.KeySet) {
@@ -103,7 +103,7 @@ func (w *MintWallet) loadDefaultMint() {
 	keySet, _ := w.persistCurrentKeysSet()
 	w.loadPersistedKeySets()
 	w.setCurrentKeySet(keySet)
-	k, err := w.client.KeySets()
+	k, err := w.Client.KeySets()
 	if err != nil {
 		panic(err)
 	}
@@ -120,14 +120,14 @@ func (w *MintWallet) loadDefaultMint() {
 
 }
 func (w *MintWallet) persistCurrentKeysSet() (crypto.KeySet, error) {
-	activeKeys, err := w.client.Keys()
+	activeKeys, err := w.Client.Keys()
 	if err != nil {
 		panic(err)
 	}
 	return w.persistKeysSet(activeKeys)
 }
 func (w *MintWallet) persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error) {
-	keySet := crypto.KeySet{MintUrl: w.client.Url, FirstSeen: time.Now(), PublicKeys: crypto.PublicKeyList{}}
+	keySet := crypto.KeySet{MintUrl: w.Client.Url, FirstSeen: time.Now(), PublicKeys: crypto.PublicKeyList{}}
 	keySet.SetPublicKeyList(keys)
 	keySet.DeriveKeySetId()
 	err := storage.StoreKeySet(keySet)
@@ -140,7 +140,7 @@ func (w *MintWallet) checkAndPersistKeySet(id string) error {
 	var ks []crypto.KeySet
 	var err error
 	if ks, err = storage.GetKeySet(db.KeySetWithId(id)); err != nil || len(ks) == 0 {
-		keys, err := w.client.KeysForKeySet(id)
+		keys, err := w.Client.KeysForKeySet(id)
 		if err != nil {
 			return err
 		}

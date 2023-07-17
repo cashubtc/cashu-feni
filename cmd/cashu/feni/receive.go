@@ -96,11 +96,11 @@ func receive(cmd *cobra.Command, args []string) {
 		log.Fatal("Aborted!")
 	}*/
 	for _, token := range tokens.Token {
-		defaultUrl := Wallet.client.Url
+		defaultUrl := Wallet.Client.Url
 		defer func() {
-			Wallet.client.Url = defaultUrl
+			Wallet.Client.Url = defaultUrl
 		}()
-		Wallet.client.Url = token.Mint
+		Wallet.Client.Url = token.Mint
 		_, _, err := Wallet.redeem(token.Proofs, script, signature)
 		if err != nil {
 			log.Fatal(err)
@@ -124,10 +124,10 @@ func verifyMints(cmd cobra.Command, token Tokens) (trust bool) {
 			continue
 		}
 		trust = false
-		u := Wallet.client.Url
-		Wallet.client.Url = m.Mint
+		u := Wallet.Client.Url
+		Wallet.Client.Url = m.Mint
 		// fetch unknown keysets from mint
-		wks, err := Wallet.client.KeySets()
+		wks, err := Wallet.Client.KeySets()
 		if err != nil {
 			panic(err)
 		}
@@ -145,7 +145,7 @@ func verifyMints(cmd cobra.Command, token Tokens) (trust bool) {
 		}
 		// ask user to verify trust
 		cmd.Printf("Warning: Tokens are from a mint you don't know yet.\n")
-		cmd.Printf("Mint URL: %s\n", Wallet.client.Url)
+		cmd.Printf("Mint URL: %s\n", Wallet.Client.Url)
 		cmd.Printf("Mint keyset: %s\n", kid)
 		cmd.Printf("Do you trust this mint and want to receive the tokens? (y/n)\n")
 		trust = ask(&cmd)
@@ -155,7 +155,7 @@ func verifyMints(cmd cobra.Command, token Tokens) (trust bool) {
 				panic(err)
 			}
 		}
-		Wallet.client.Url = u // reset the url
+		Wallet.Client.Url = u // reset the url
 	}
 	return
 }
