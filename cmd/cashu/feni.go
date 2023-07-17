@@ -53,6 +53,7 @@ var advancedPrompt = &feni.CobraPrompt{
 }
 
 func main() {
+	feni.StartClientConfiguration()
 	advancedPrompt.RootCmd.PersistentFlags().StringVarP(&feni.WalletUsed, "wallet", "w", "wallet", "Name of your wallet")
 	advancedPrompt.RootCmd.PersistentFlags().StringVarP(&feni.Host, "host", "H", "", "Mint host address")
 	advancedPrompt.Run()

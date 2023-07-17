@@ -38,7 +38,7 @@ func defaultConfig() {
 	}
 
 }
-func init() {
+func StartClientConfiguration() {
 	loaded := false
 	dirname, err := os.UserHomeDir()
 	if err != nil {
