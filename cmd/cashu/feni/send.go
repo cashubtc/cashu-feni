@@ -3,12 +3,13 @@ package feni
 import (
 	"bytes"
 	"fmt"
+	"strconv"
+
 	"github.com/c-bata/go-prompt"
 	"github.com/cashubtc/cashu-feni/cashu"
 	"github.com/cashubtc/cashu-feni/crypto"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 func init() {
@@ -81,6 +82,7 @@ func askMintSelection(cmd *cobra.Command) error {
 	Wallet.loadDefaultMint()
 	return nil
 }
+
 func askInt(cmd *cobra.Command) int {
 	reader := cmd.InOrStdin()
 	in := []byte{}
@@ -101,7 +103,6 @@ func askInt(cmd *cobra.Command) int {
 	s, err := strconv.Atoi(string(in))
 	fmt.Printf("%d, %v", s, err)
 	return s
-	return 0
 }
 
 func send(cmd *cobra.Command, args []string) {
@@ -117,16 +118,24 @@ func send(cmd *cobra.Command, args []string) {
 	if lockFlag != "" && flagIsPay2ScriptHash() {
 		p2sh = true
 	}
-	mint, _ := strconv.Atoi(args[1])
-	Wallet.Client.Url = filteredKeySets[mint].MintUrl
-	Wallet.loadDefaultMint()
-	amount, err := strconv.Atoi(args[0])
+
+	keyset, err := Wallet.getKeySet(args[1])
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
-	_, sendProofs, err := Wallet.SplitToSend(uint64(amount), lockFlag, true)
+	Wallet.Client.Url = keyset.MintUrl
+
+	Wallet.loadDefaultMint()
+	amount, err := strconv.ParseUint(args[0], 10, 64)
 	if err != nil {
-		panic(err)
+		fmt.Println("invalid amount")
+		return
+	}
+	_, sendProofs, err := Wallet.SplitToSend(amount, lockFlag, true)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 	var hide bool
 	if lockFlag != "" && !p2sh {
@@ -134,7 +143,8 @@ func send(cmd *cobra.Command, args []string) {
 	}
 	token, err := Wallet.serializeToken(sendProofs, hide)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 	fmt.Println(token)
 }
