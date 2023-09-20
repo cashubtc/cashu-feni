@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/c-bata/go-prompt"
-	"github.com/cashubtc/cashu-feni/cmd/cashu/feni"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/c-bata/go-prompt"
+	"github.com/cashubtc/cashu-feni/cmd/cashu/feni"
 )
 
-var sendRegex = regexp.MustCompile("send [0-9] ")
+var sendRegex = regexp.MustCompile("send [0-9]")
 var advancedPrompt = &feni.CobraPrompt{
 	RootCmd:                  feni.RootCmd,
 	PersistFlagValues:        true,
