@@ -119,14 +119,10 @@ func send(cmd *cobra.Command, args []string) {
 		p2sh = true
 	}
 
-	keyset, err := Wallet.getKeySet(args[1])
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	Wallet.Client.Url = keyset.MintUrl
-
+	mint, _ := strconv.Atoi(args[1])
+	Wallet.Client.Url = filteredKeySets[mint].MintUrl
 	Wallet.loadDefaultMint()
+
 	amount, err := strconv.ParseUint(args[0], 10, 64)
 	if err != nil {
 		fmt.Println("invalid amount")
