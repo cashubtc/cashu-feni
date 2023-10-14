@@ -64,7 +64,7 @@ func New(masterKey string, opt ...Options) *Mint {
 
 	return l
 }
-func (m Mint) setProofsPending(proofs []cashu.Proof) error {
+func (m *Mint) setProofsPending(proofs []cashu.Proof) error {
 	for _, proof := range proofs {
 		p, err := m.database.GetUsedProofs(proof.Secret)
 		if err != nil {
@@ -83,14 +83,8 @@ func (m Mint) setProofsPending(proofs []cashu.Proof) error {
 	}
 	return nil
 }
-func (m Mint) unsetProofsPending(proofs []cashu.Proof, transactionError *error) error {
+func (m *Mint) unsetProofsPending(proofs []cashu.Proof) error {
 	for _, proof := range proofs {
-		if transactionError != nil {
-			err := m.database.DeleteProof(proof)
-			if err != nil {
-				return err
-			}
-		}
 		proof.Status = cashu.ProofStatusSpent
 		err := m.database.StoreProof(proof)
 		if err != nil {
@@ -99,7 +93,7 @@ func (m Mint) unsetProofsPending(proofs []cashu.Proof, transactionError *error) 
 	}
 	return nil
 }
-func (m Mint) LoadKeySet(id string) (*crypto.KeySet, error) {
+func (m *Mint) LoadKeySet(id string) (*crypto.KeySet, error) {
 	if m.keySets[id] == nil {
 		return nil, fmt.Errorf("keyset does not exist")
 	}
@@ -141,10 +135,10 @@ func WithStorage(database db.MintStorage) Options {
 		l.database = database
 	}
 }
-func (m Mint) GetKeySetIds() []string {
+func (m *Mint) GetKeySetIds() []string {
 	return lo.Keys(m.keySets)
 }
-func (m Mint) GetKeySet() []string {
+func (m *Mint) GetKeySet() []string {
 	return lo.Keys(m.keySets)
 }
 
@@ -228,7 +222,7 @@ func (m *Mint) payLightningInvoice(pr string, feeLimitMSat uint64) (lightning.Pa
 	return m.client.InvoiceStatus(invoice.GetHash())
 }
 
-func (m Mint) mint(messages cashu.BlindedMessages, pr string, keySet *crypto.KeySet) ([]cashu.BlindedSignature, error) {
+func (m *Mint) mint(messages cashu.BlindedMessages, pr string, keySet *crypto.KeySet) ([]cashu.BlindedSignature, error) {
 	publicKeys := make([]*secp256k1.PublicKey, 0)
 	var amounts []uint64
 	for _, msg := range messages {
@@ -262,11 +256,11 @@ func (m Mint) mint(messages cashu.BlindedMessages, pr string, keySet *crypto.Key
 	return promises, nil
 }
 
-func (m Mint) Mint(messages cashu.BlindedMessages, pr string, keySet *crypto.KeySet) ([]cashu.BlindedSignature, error) {
+func (m *Mint) Mint(messages cashu.BlindedMessages, pr string, keySet *crypto.KeySet) ([]cashu.BlindedSignature, error) {
 	// mint generates promises for keys. checks lightning invoice before creating promise.
 	return m.mint(messages, pr, keySet)
 }
-func (m Mint) MintWithoutKeySet(messages cashu.BlindedMessages, pr string) ([]cashu.BlindedSignature, error) {
+func (m *Mint) MintWithoutKeySet(messages cashu.BlindedMessages, pr string) ([]cashu.BlindedSignature, error) {
 	// mint generates promises for keys. checks lightning invoice before creating promise.
 	keyset, err := m.LoadKeySet(m.KeySetId)
 	if err != nil {
@@ -535,7 +529,7 @@ func (m *Mint) Melt(proofs []cashu.Proof, invoice string) (payment lightning.Pay
 	if err != nil {
 		return
 	}
-	defer m.unsetProofsPending(proofs, &err)
+	defer m.unsetProofsPending(proofs)
 	var total uint64
 
 	if err = m.verifyProofs(proofs); err != nil {
@@ -574,7 +568,7 @@ func (m *Mint) Split(proofs []cashu.Proof, amount uint64, outputs []cashu.Blinde
 	if err != nil {
 		return nil, nil, err
 	}
-	defer m.unsetProofsPending(proofs, &err)
+	defer m.unsetProofsPending(proofs)
 	total := lo.SumBy[cashu.Proof](proofs, func(p cashu.Proof) uint64 {
 		return p.Amount
 	})

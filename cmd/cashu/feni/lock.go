@@ -5,27 +5,27 @@ import (
 	"fmt"
 	"github.com/cashubtc/cashu-feni/bitcoin"
 	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/wallet"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	RootCmd.AddCommand(lockCommand)
+	RootCmd.Command().AddCommand(lockCommand)
 
 }
 
 var lockCommand = &cobra.Command{
-	Use:    "lock",
-	Short:  "Generate receiving lock",
-	Long:   `Generates a receiving lock for cashu tokens.`,
-	PreRun: PreRunFeni,
-	Run:    lock,
+	Use:   "lock",
+	Short: "Generate receiving lock",
+	Long:  `Generates a receiving lock for cashu tokens.`,
+	Run:   RunCommandWithWallet(RootCmd, lock),
 }
 
 func flagIsPay2ScriptHash() bool {
 	return cashu.IsPay2ScriptHash(lockFlag)
 }
 
-func lock(cmd *cobra.Command, args []string) {
+func lock(wallet *wallet.Wallet, params cobraParameter) {
 	fmt.Println(createP2SHLock())
 }
 

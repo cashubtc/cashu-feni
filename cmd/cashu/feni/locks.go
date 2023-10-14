@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"github.com/c-bata/go-prompt"
 	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/wallet"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	RootCmd.AddCommand(locksCommand)
+	RootCmd.Command().AddCommand(locksCommand)
 
 }
 
@@ -27,17 +28,16 @@ var GetLocksDynamic = func(annotationValue string) []prompt.Suggest {
 	return suggestions
 }
 var locksCommand = &cobra.Command{
-	Use:    "locks",
-	Short:  "Show unused receiving locks",
-	Long:   `Generates a receiving lock for cashu tokens.`,
-	PreRun: PreRunFeni,
+	Use:   "locks",
+	Short: "Show unused receiving locks",
+	Long:  `Generates a receiving lock for cashu tokens.`,
 	Annotations: map[string]string{
 		DynamicSuggestionsAnnotation: getLocksAnnotationValue,
 	},
-	Run: locks,
+	Run: RunCommandWithWallet(RootCmd, locks),
 }
 
-func locks(cmd *cobra.Command, args []string) {
+func locks(wallet *wallet.Wallet, params cobraParameter) {
 	scriptLocks := getP2SHLocks()
 	for _, l := range scriptLocks {
 		fmt.Printf("P2SH:%s\n", l.Address)

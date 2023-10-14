@@ -3,25 +3,25 @@ package feni
 import (
 	"fmt"
 	"github.com/cashubtc/cashu-feni/lightning/invoice"
+	"github.com/cashubtc/cashu-feni/wallet"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var invoicesCommand = &cobra.Command{
-	Use:    "invoices",
-	Short:  "List all pending invoices",
-	Long:   ``,
-	PreRun: PreRunFeni,
-	Run:    invoicesCmd,
+	Use:   "invoices",
+	Short: "List all pending invoices",
+	Long:  ``,
+	Run:   RunCommandWithWallet(RootCmd, invoicesCmd),
 }
 
 func init() {
-	RootCmd.AddCommand(invoicesCommand)
+	RootCmd.Command().AddCommand(invoicesCommand)
 }
 
-func invoicesCmd(cmd *cobra.Command, args []string) {
+func invoicesCmd(wallet *wallet.Wallet, params cobraParameter) {
 	invoices := make([]invoice.Invoice, 0)
-	invoices, err := storage.GetLightningInvoices(false)
+	invoices, err := wallet.Storage.GetLightningInvoices(false)
 	if err != nil {
 		log.Fatal(err)
 	}

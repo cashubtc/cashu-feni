@@ -3,6 +3,7 @@ package feni
 import (
 	"fmt"
 	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/wallet"
 	decodepay "github.com/nbd-wtf/ln-decodepay"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -11,16 +12,15 @@ import (
 )
 
 func init() {
-	RootCmd.AddCommand(payCommand)
+	RootCmd.Command().AddCommand(payCommand)
 
 }
 
 var payCommand = &cobra.Command{
-	Use:    "pay <invoice>",
-	Short:  "Pay lightning invoice",
-	Long:   `Pay a lightning invoice using cashu tokens.`,
-	PreRun: PreRunFeni,
-	Run:    pay,
+	Use:   "pay <invoice>",
+	Short: "Pay lightning invoice",
+	Long:  `Pay a lightning invoice using cashu tokens.`,
+	Run:   RunCommandWithWallet(RootCmd, pay),
 }
 
 func ask(cmd *cobra.Command) bool {
@@ -50,42 +50,42 @@ func ask(cmd *cobra.Command) bool {
 	}
 	return false
 }
-func pay(cmd *cobra.Command, args []string) {
-	if len(args) != 1 {
-		cmd.Help()
+func pay(wallet *wallet.Wallet, params cobraParameter) {
+	if len(params.args) != 1 {
+		params.cmd.Help()
 		return
 	}
-	invoice := args[0]
-	fee, err := Wallet.Client.CheckFee(cashu.CheckFeesRequest{Pr: invoice})
+	invoice := params.args[0]
+	fee, err := wallet.Client.CheckFee(cashu.CheckFeesRequest{Pr: invoice})
 	if err != nil {
 		log.Fatal(err)
 	}
 	bold, err := decodepay.Decodepay(invoice)
 	if err != nil {
-		cmd.Println("invalid invoice")
+		params.cmd.Println("invalid invoice")
 		return
 	}
 	amount := math.Ceil(float64((uint64(bold.MSatoshi) + fee.Fee*1000) / 1000))
 	if amount < 0 {
 		log.Fatal("amount is not positive")
 	}
-	if Wallet.availableBalance() < uint64(amount) {
+	if wallet.AvailableBalance() < uint64(amount) {
 		log.Fatal("Error: Balance to low.")
 	}
-	cmd.Printf("Pay %d sat (%f sat incl. fees)?\n", uint64(amount)-fee.Fee, amount)
-	cmd.Println("continue? [Y/n]")
-	if !ask(cmd) {
-		cmd.Println("canceled...")
+	params.cmd.Printf("Pay %d sat (%f sat incl. fees)?\n", uint64(amount)-fee.Fee, amount)
+	params.cmd.Println("continue? [Y/n]")
+	if !ask(params.cmd) {
+		params.cmd.Println("canceled...")
 		return
 	}
-	_, sendProofs, err := Wallet.SplitToSend(uint64(amount), "", false)
+	_, sendProofs, err := wallet.SplitToSend(uint64(amount), "", false)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Infof("Paying Lightning invoice ...")
-	changeProofs, err := Wallet.PayLightning(sendProofs, invoice)
+	changeProofs, err := wallet.PayLightning(sendProofs, invoice)
 	if changeProofs != nil {
-		err = storeProofs(changeProofs)
+		err = wallet.StoreProofs(changeProofs)
 		if err != nil {
 			log.Fatal(err)
 		}

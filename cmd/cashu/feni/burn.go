@@ -4,16 +4,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/wallet"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var burnCommand = &cobra.Command{
-	Use:    "burn",
-	Short:  "Burn spent tokens",
-	Long:   ``,
-	PreRun: PreRunFeni,
-	Run:    burnCmd,
+	Use:   "burn",
+	Short: "Burn spent tokens",
+	Long:  ``,
+	Run:   RunCommandWithWallet(RootCmd, burnCmd),
 }
 var all bool
 var force bool
@@ -21,15 +21,15 @@ var force bool
 func init() {
 	burnCommand.PersistentFlags().BoolVarP(&all, "all", "a", false, "burn all spent tokens.")
 	burnCommand.PersistentFlags().BoolVarP(&force, "force", "f", false, "force check on all tokens.")
-	RootCmd.AddCommand(burnCommand)
+	RootCmd.Command().AddCommand(burnCommand)
 }
-func burnCmd(cmd *cobra.Command, args []string) {
+func burnCmd(wallet *wallet.Wallet, params cobraParameter) {
 	var token string
-	if len(args) == 1 {
-		token = args[0]
+	if len(params.args) == 1 {
+		token = params.args[0]
 	}
 	if !(all || force || token != "") || (token != "" && all) {
-		cmd.Println("Error: enter a token or use --all to burn all pending tokens or --force to check all tokens.")
+		params.cmd.Println("Error: enter a token or use --all to burn all pending tokens or --force to check all tokens.")
 		return
 	}
 	proofs := make([]cashu.Proof, 0)
@@ -40,7 +40,7 @@ func burnCmd(cmd *cobra.Command, args []string) {
 			log.Fatal(err)
 		}
 	} else if force {
-		proofs = Wallet.proofs
+		// invalidate all wallet proofs
 	} else {
 		p, err := base64.URLEncoding.DecodeString(token)
 		if err != nil {
@@ -56,7 +56,7 @@ func burnCmd(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	err = invalidate(proofs)
+	err = wallet.Invalidate(proofs)
 	if err != nil {
 		log.Fatal(err)
 	}
