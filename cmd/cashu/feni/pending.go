@@ -8,10 +8,11 @@ import (
 )
 
 var pendingCommand = &cobra.Command{
-	Use:   "pending",
-	Short: "Show pending tokens",
-	Long:  ``,
-	Run:   RunCommandWithWallet(RootCmd, pendingCmd),
+	Use:    "pending",
+	Short:  "Show pending tokens",
+	Long:   ``,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, pendingCmd),
 }
 
 func init() {

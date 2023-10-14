@@ -30,3 +30,10 @@ func RunCommandWithWallet(root *RootCommand, command command) func(cmd *cobra.Co
 		command(root.wallet, cobraParameter{cmd: cmd, args: args})
 	}
 }
+func preRun(w *wallet.Wallet, params cobraParameter) {
+	opts := make([]wallet.Option, 0)
+	if WalletName != "" {
+		opts = append(opts, wallet.WithName(WalletName))
+	}
+	RootCmd.wallet = wallet.New(opts...)
+}

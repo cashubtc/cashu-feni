@@ -27,7 +27,8 @@ var sendCommand = &cobra.Command{
 	Annotations: map[string]string{
 		DynamicSuggestionsAnnotation: getLocksAnnotationValue, // get suggestion for p2sh
 	},
-	Run: RunCommandWithWallet(RootCmd, send),
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, send),
 }
 var filteredKeySets []crypto.KeySet
 var GetMintsDynamic = func(wallet *wallet.Wallet, annotationValue string) []prompt.Suggest {

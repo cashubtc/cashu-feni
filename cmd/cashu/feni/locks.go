@@ -34,7 +34,8 @@ var locksCommand = &cobra.Command{
 	Annotations: map[string]string{
 		DynamicSuggestionsAnnotation: getLocksAnnotationValue,
 	},
-	Run: RunCommandWithWallet(RootCmd, locks),
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, locks),
 }
 
 func locks(wallet *wallet.Wallet, params cobraParameter) {

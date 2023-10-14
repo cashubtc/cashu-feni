@@ -12,10 +12,11 @@ import (
 )
 
 var invoiceCommand = &cobra.Command{
-	Use:   "invoice",
-	Short: "Creates a new invoice, if lightning is enabled",
-	Long:  ``,
-	Run:   RunCommandWithWallet(RootCmd, mintCmd),
+	Use:    "invoice",
+	Short:  "Creates a new invoice, if lightning is enabled",
+	Long:   ``,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, mintCmd),
 }
 var hash string
 

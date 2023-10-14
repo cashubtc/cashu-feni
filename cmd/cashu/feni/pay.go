@@ -17,10 +17,11 @@ func init() {
 }
 
 var payCommand = &cobra.Command{
-	Use:   "pay <invoice>",
-	Short: "Pay lightning invoice",
-	Long:  `Pay a lightning invoice using cashu tokens.`,
-	Run:   RunCommandWithWallet(RootCmd, pay),
+	Use:    "pay <invoice>",
+	Short:  "Pay lightning invoice",
+	Long:   `Pay a lightning invoice using cashu tokens.`,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, pay),
 }
 
 func ask(cmd *cobra.Command) bool {

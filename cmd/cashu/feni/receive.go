@@ -18,10 +18,11 @@ func init() {
 }
 
 var receiveCommand = &cobra.Command{
-	Use:   "receive",
-	Short: "Receive tokens",
-	Long:  `Receive cashu tokens from another user`,
-	Run:   RunCommandWithWallet(RootCmd, receive),
+	Use:    "receive",
+	Short:  "Receive tokens",
+	Long:   `Receive cashu tokens from another user`,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, receive),
 }
 
 type Tokens struct {

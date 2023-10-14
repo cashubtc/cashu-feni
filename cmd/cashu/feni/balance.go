@@ -11,17 +11,11 @@ func init() {
 }
 
 var balanceCommand = &cobra.Command{
-	Use:   "balance",
-	Short: "Check your balance",
-	Long:  ``,
-	PreRun: RunCommandWithWallet(RootCmd, func(w *wallet.Wallet, params cobraParameter) {
-		opts := make([]wallet.Option, 0)
-		if WalletName != "" {
-			opts = append(opts, wallet.WithName(WalletName))
-		}
-		RootCmd.wallet = wallet.New(opts...)
-	}),
-	Run: RunCommandWithWallet(RootCmd, balance),
+	Use:    "balance",
+	Short:  "Check your balance",
+	Long:   ``,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, balance),
 }
 
 func balance(wallet *wallet.Wallet, params cobraParameter) {

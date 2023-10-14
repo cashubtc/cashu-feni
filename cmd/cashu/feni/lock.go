@@ -15,10 +15,11 @@ func init() {
 }
 
 var lockCommand = &cobra.Command{
-	Use:   "lock",
-	Short: "Generate receiving lock",
-	Long:  `Generates a receiving lock for cashu tokens.`,
-	Run:   RunCommandWithWallet(RootCmd, lock),
+	Use:    "lock",
+	Short:  "Generate receiving lock",
+	Long:   `Generates a receiving lock for cashu tokens.`,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, lock),
 }
 
 func flagIsPay2ScriptHash() bool {

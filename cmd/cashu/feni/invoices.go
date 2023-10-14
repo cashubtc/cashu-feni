@@ -9,10 +9,11 @@ import (
 )
 
 var invoicesCommand = &cobra.Command{
-	Use:   "invoices",
-	Short: "List all pending invoices",
-	Long:  ``,
-	Run:   RunCommandWithWallet(RootCmd, invoicesCmd),
+	Use:    "invoices",
+	Short:  "List all pending invoices",
+	Long:   ``,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, invoicesCmd),
 }
 
 func init() {

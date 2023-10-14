@@ -10,10 +10,11 @@ import (
 )
 
 var burnCommand = &cobra.Command{
-	Use:   "burn",
-	Short: "Burn spent tokens",
-	Long:  ``,
-	Run:   RunCommandWithWallet(RootCmd, burnCmd),
+	Use:    "burn",
+	Short:  "Burn spent tokens",
+	Long:   ``,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, burnCmd),
 }
 var all bool
 var force bool
