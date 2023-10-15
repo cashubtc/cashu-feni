@@ -32,7 +32,7 @@ var sendCommand = &cobra.Command{
 }
 var filteredKeySets []crypto.KeySet
 var GetMintsDynamic = func(wallet *wallet.Wallet, annotationValue string) []prompt.Suggest {
-	keysets, err := storage.GetKeySet()
+	keysets, err := wallet.Storage.GetKeySet()
 	if err != nil {
 		return nil
 	}
@@ -59,7 +59,7 @@ var GetMintsDynamic = func(wallet *wallet.Wallet, annotationValue string) []prom
 }
 
 func askMintSelection(wallet *wallet.Wallet, cmd *cobra.Command) error {
-	keysets, err := storage.GetKeySet()
+	keysets, err := wallet.Storage.GetKeySet()
 	if err != nil {
 		return nil
 	}

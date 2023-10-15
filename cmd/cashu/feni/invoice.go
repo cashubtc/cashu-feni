@@ -30,19 +30,13 @@ func mintCmd(wallet *wallet.Wallet, params cobraParameter) {
 		panic(err)
 	}
 	if amount > 0 {
-		if !wallet.Config.Lightning {
-			if _, err := wallet.Mint(uint64(amount), hash); err != nil {
-				log.Error(err)
-			}
-			return
-		}
 		if hash == "" {
 			var invoice lightning.Invoicer
 			invoice, err = wallet.Client.GetMint(int64(amount))
 			if err != nil {
 				panic(err)
 			}
-			err = storage.StoreLightningInvoice(invoice)
+			err = wallet.Storage.StoreLightningInvoice(invoice)
 			if err != nil {
 				log.Fatal(err)
 			}

@@ -36,7 +36,7 @@ func burnCmd(wallet *wallet.Wallet, params cobraParameter) {
 	proofs := make([]cashu.Proof, 0)
 	var err error
 	if all {
-		proofs, err = storage.GetReservedProofs()
+		proofs, err = wallet.Storage.GetReservedProofs()
 		if err != nil {
 			log.Fatal(err)
 		}

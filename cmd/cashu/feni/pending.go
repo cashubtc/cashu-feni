@@ -19,7 +19,7 @@ func init() {
 	RootCmd.Command().AddCommand(pendingCommand)
 }
 func pendingCmd(wallet *wallet.Wallet, params cobraParameter) {
-	reserved, err := storage.GetReservedProofs()
+	reserved, err := wallet.Storage.GetReservedProofs()
 	if err != nil {
 		log.Fatal(err)
 	}

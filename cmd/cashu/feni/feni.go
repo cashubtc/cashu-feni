@@ -3,7 +3,6 @@ package feni
 import (
 	"fmt"
 	"github.com/c-bata/go-prompt"
-	"github.com/cashubtc/cashu-feni/db"
 	"github.com/cashubtc/cashu-feni/wallet"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
@@ -11,8 +10,6 @@ import (
 	"os"
 	"path"
 )
-
-var storage db.MintStorage
 
 const getWalletsAnnotationValue = "GetWallets"
 

@@ -70,7 +70,7 @@ func DynamicSuggestion(cmd *RootCommand) func(annotationValue string, document *
 				return suggestions
 			}
 		} else if document.Text == "locks " || document.Text == "-l " {
-			if suggestions := GetLocksDynamic(annotationValue); suggestions != nil {
+			if suggestions := GetLocksDynamic(cmd.wallet, annotationValue); suggestions != nil {
 				return suggestions
 			}
 		} else if sendRegex.MatchString(document.Text) {

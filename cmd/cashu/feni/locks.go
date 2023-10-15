@@ -15,8 +15,8 @@ func init() {
 
 const getLocksAnnotationValue = "GetLocks"
 
-var GetLocksDynamic = func(annotationValue string) []prompt.Suggest {
-	scripts, err := storage.GetScripts("")
+var GetLocksDynamic = func(wallet *wallet.Wallet, annotationValue string) []prompt.Suggest {
+	scripts, err := wallet.Storage.GetScripts("")
 	if err != nil {
 		return nil
 	}
@@ -39,14 +39,14 @@ var locksCommand = &cobra.Command{
 }
 
 func locks(wallet *wallet.Wallet, params cobraParameter) {
-	scriptLocks := getP2SHLocks()
+	scriptLocks := getP2SHLocks(wallet)
 	for _, l := range scriptLocks {
 		fmt.Printf("P2SH:%s\n", l.Address)
 	}
 }
 
-func getP2SHLocks() []cashu.P2SHScript {
-	scripts, err := storage.GetScripts("")
+func getP2SHLocks(wallet *wallet.Wallet) []cashu.P2SHScript {
+	scripts, err := wallet.Storage.GetScripts("")
 	if err != nil {
 		return nil
 	}

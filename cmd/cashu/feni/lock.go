@@ -27,10 +27,10 @@ func flagIsPay2ScriptHash() bool {
 }
 
 func lock(wallet *wallet.Wallet, params cobraParameter) {
-	fmt.Println(createP2SHLock())
+	fmt.Println(createP2SHLock(wallet))
 }
 
-func createP2SHLock() *cashu.P2SHScript {
+func createP2SHLock(wallet *wallet.Wallet) *cashu.P2SHScript {
 	key := bitcoin.Step0CarolPrivateKey()
 	txInRedeemScript := bitcoin.Step0CarolCheckSigRedeemScript(*key.PubKey())
 	fmt.Println(txInRedeemScript)
@@ -45,7 +45,7 @@ func createP2SHLock() *cashu.P2SHScript {
 	txInRedeemScriptB64 := base64.URLEncoding.EncodeToString(txInRedeemScript)
 	txInSignatureB64 := base64.URLEncoding.EncodeToString(txInSignature.SignatureScript)
 	p2SHScript := cashu.P2SHScript{Script: txInRedeemScriptB64, Signature: txInSignatureB64, Address: txInP2SHAdress.EncodeAddress()}
-	err = storage.StoreScript(p2SHScript)
+	err = wallet.Storage.StoreScript(p2SHScript)
 	if err != nil {
 		return nil
 	}
