@@ -109,10 +109,7 @@ func (e ErrorResponse) Error() string {
 
 // CreateInvoice will generate a blank invoice
 func CreateInvoice() lightning.Invoicer {
-	if lightning.Config.Lightning.Enabled {
-		return lnbits.NewInvoice()
-	}
-	return nil
+	return lnbits.NewInvoice()
 }
 
 type Mint struct {

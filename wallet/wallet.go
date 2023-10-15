@@ -1,11 +1,14 @@
-package feni
+package wallet
 
 import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/caarlos0/env/v6"
 	"math/rand"
 	"net/url"
+	"os"
+	"path"
 	"time"
 
 	"github.com/cashubtc/cashu-feni/cashu"
@@ -35,15 +38,42 @@ func Zip[T, U any](ts []T, us []U) []Pair[T, U] {
 	return pairs
 }
 
-type MintWallet struct {
+type Wallet struct {
 	//	keys    map[uint64]*secp256k1.PublicKey // current public keys from mint server
 	keySets       []crypto.KeySet // current keySet id from mint server.
 	proofs        []cashu.Proof
 	currentKeySet *crypto.KeySet
 	Client        *Client
+	Storage       db.MintStorage
+	Config        Config
 }
+type Option func(w *Wallet)
 
-var Wallet MintWallet
+func WithName(name string) Option {
+	return func(w *Wallet) {
+		w.Config.Wallet = name
+	}
+}
+func New(opts ...Option) *Wallet {
+	wallet := &Wallet{
+		proofs: make([]cashu.Proof, 0),
+	}
+	wallet.startClientConfiguration()
+	for _, opt := range opts {
+		opt(wallet)
+	}
+	wallet.initializeDatabase(wallet.Config.Wallet)
+
+	wallet.Client = &Client{Url: fmt.Sprintf("%s:%s", wallet.Config.MintServerHost, wallet.Config.MintServerPort)}
+	wallet.LoadDefaultMint()
+
+	proofs, err := wallet.Storage.GetUsedProofs()
+	if err != nil {
+		return nil
+	}
+	wallet.proofs = proofs
+	return wallet
+}
 
 // constructOutputs takes in a slice of amounts and a slice of secrets, and
 // constructs a MintRequest with blinded messages and a slice of private keys
@@ -73,31 +103,41 @@ func constructOutputs(amounts []uint64, secrets []string) (cashu.MintRequest, []
 	return payloads, privateKeys
 }
 
-func (w MintWallet) checkUsedSecrets(amounts []uint64, secrets []string) error {
-	proofs := storage.ProofsUsed(secrets)
+func (w *Wallet) checkUsedSecrets(amounts []uint64, secrets []string) error {
+	proofs := w.Storage.ProofsUsed(secrets)
 	if len(proofs) > 0 {
 		return fmt.Errorf("proofs already used")
 	}
 	return nil
 }
 
-func (w MintWallet) availableBalance() uint64 {
+func (w *Wallet) AvailableBalance() uint64 {
 	return SumProofs(w.proofs)
 }
 
-func (w MintWallet) Mint(amount uint64, paymentHash string) ([]cashu.Proof, error) {
+func (w *Wallet) StoreProofs(proofs []cashu.Proof) error {
+	for _, proof := range proofs {
+		w.proofs = append(w.proofs, proof)
+		err := w.Storage.StoreProof(proof)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (w *Wallet) Mint(amount uint64, paymentHash string) ([]cashu.Proof, error) {
 	split := mint.AmountSplit(amount)
 	proofs := w.mint(split, paymentHash)
 	if len(proofs) == 0 {
 		return nil, fmt.Errorf("received no proofs.")
 	}
-	err := storeProofs(proofs)
+	err := w.StoreProofs(proofs)
 	if err != nil {
 		return nil, err
 	}
 	if paymentHash != "" {
-		err = storage.UpdateLightningInvoice(
-			hash,
+		err = w.Storage.UpdateLightningInvoice(
+			paymentHash,
 			db.UpdateInvoicePaid(true),
 			db.UpdateInvoiceTimePaid(time.Now()),
 		)
@@ -108,7 +148,7 @@ func (w MintWallet) Mint(amount uint64, paymentHash string) ([]cashu.Proof, erro
 	w.proofs = append(w.proofs, proofs...)
 	return proofs, nil
 }
-func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
+func (w *Wallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 	secrets := make([]string, 0)
 	for range amounts {
 		secrets = append(secrets, generateSecret())
@@ -125,7 +165,7 @@ func (w MintWallet) mint(amounts []uint64, paymentHash string) []cashu.Proof {
 	return w.constructProofs(blindedSignatures.Promises, secrets, privateKeys)
 }
 
-func (w MintWallet) constructProofs(promises []cashu.BlindedSignature, secrets []string, privateKeys []*secp256k1.PrivateKey) []cashu.Proof {
+func (w *Wallet) constructProofs(promises []cashu.BlindedSignature, secrets []string, privateKeys []*secp256k1.PrivateKey) []cashu.Proof {
 	proofs := make([]cashu.Proof, 0)
 	for i, promise := range promises {
 		h, err := hex.DecodeString(promise.C_)
@@ -152,6 +192,12 @@ type Balance struct {
 	Available uint64
 	Mint      Mint
 }
+type Mint struct {
+	URL string   `json:"url"`
+	Ks  []string `json:"ks"`
+}
+type Mints map[string]Mint
+
 type Balances []*Balance
 
 func (b Balances) ById(id string) *Balance {
@@ -162,10 +208,10 @@ func (b Balances) ById(id string) *Balance {
 	}
 	return nil
 }
-func (w MintWallet) getProofsPerMintUrl() cashu.Proofs {
+func (w *Wallet) getProofsPerMintUrl() cashu.Proofs {
 	return w.proofs
 }
-func (w MintWallet) balancePerKeySet() (Balances, error) {
+func (w *Wallet) Balances() (Balances, error) {
 	balances := make(Balances, 0)
 	for _, proof := range w.proofs {
 		proofBalance, foundBalance := lo.Find[*Balance](balances, func(b *Balance) bool {
@@ -220,9 +266,6 @@ func generateSecrets(secret string, n int) []string {
 func generateSecret() string {
 	return base64.RawURLEncoding.EncodeToString([]byte(RandStringRunes(16)))
 }
-func getUnusedLocks(addressSplit string) ([]cashu.P2SHScript, error) {
-	return storage.GetScripts(addressSplit)
-}
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
@@ -234,7 +277,7 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 
-func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) ([]cashu.Proof, error) {
+func (w *Wallet) PayLightning(proofs []cashu.Proof, invoice string) ([]cashu.Proof, error) {
 	secrets := make([]string, 0)
 	amounts := []uint64{0, 0, 0, 0}
 	for i := 0; i < 4; i++ {
@@ -247,7 +290,7 @@ func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) ([]cashu.
 	}
 	if res.Paid {
 		changeProofs := w.constructProofs(res.Change, secrets, rs)
-		err = invalidate(proofs)
+		err = w.Invalidate(proofs)
 		if err != nil {
 			return changeProofs, err
 		}
@@ -255,7 +298,7 @@ func (w MintWallet) PayLightning(proofs []cashu.Proof, invoice string) ([]cashu.
 	}
 	return nil, fmt.Errorf("could not pay invoice")
 }
-func (w MintWallet) getKeySet(id string) (crypto.KeySet, error) {
+func (w *Wallet) getKeySet(id string) (crypto.KeySet, error) {
 	k, found := lo.Find[crypto.KeySet](w.keySets, func(k crypto.KeySet) bool {
 		return k.Id == id
 	})
@@ -265,7 +308,7 @@ func (w MintWallet) getKeySet(id string) (crypto.KeySet, error) {
 	return k, nil
 }
 
-func (w MintWallet) GetSpendableProofs() ([]cashu.Proof, error) {
+func (w *Wallet) GetSpendableProofs() ([]cashu.Proof, error) {
 	spendable := make([]cashu.Proof, 0)
 	for _, proof := range lo.Filter[cashu.Proof](w.proofs, func(p cashu.Proof, i int) bool {
 		return p.Id == w.currentKeySet.Id
@@ -285,7 +328,7 @@ func (w MintWallet) GetSpendableProofs() ([]cashu.Proof, error) {
 	return spendable, nil
 }
 
-func (w MintWallet) SplitToSend(amount uint64, scndSecret string, setReserved bool) (keep []cashu.Proof, send []cashu.Proof, err error) {
+func (w *Wallet) SplitToSend(amount uint64, scndSecret string, setReserved bool) (keep []cashu.Proof, send []cashu.Proof, err error) {
 	spendableProofs, err := w.GetSpendableProofs()
 	if err != nil {
 		return nil, nil, err
@@ -305,30 +348,20 @@ func (w MintWallet) SplitToSend(amount uint64, scndSecret string, setReserved bo
 	}
 	return keepProofs, SendProofs, err
 }
-func (w MintWallet) setReserved(p []cashu.Proof, reserved bool) error {
+func (w *Wallet) setReserved(p []cashu.Proof, reserved bool) error {
 	for _, proof := range p {
 		proof.Reserved = reserved
 		proof.SendId = uuid.New()
 		proof.TimeReserved = time.Now()
-		err := storage.StoreProof(proof)
+		err := w.Storage.StoreProof(proof)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
-func (w MintWallet) redeem(proofs []cashu.Proof, scndScript, scndSignature string) (keep []cashu.Proof, send []cashu.Proof, err error) {
-	if scndScript != "" && scndSignature != "" {
-		log.Infof("Unlock script: %s", scndScript)
-		for i := range proofs {
-			proofs[i].Script = &cashu.P2SHScript{
-				Script:    scndScript,
-				Signature: scndSignature}
-		}
-	}
-	return w.Split(proofs, SumProofs(proofs), "")
-}
-func (w *MintWallet) Split(proofs []cashu.Proof, amount uint64, scndSecret string) (keep []cashu.Proof, send []cashu.Proof, err error) {
+
+func (w *Wallet) Split(proofs []cashu.Proof, amount uint64, scndSecret string) (keep []cashu.Proof, send []cashu.Proof, err error) {
 	if len(proofs) < 0 {
 		return nil, nil, fmt.Errorf("no proofs provided.")
 	}
@@ -351,19 +384,19 @@ func (w *MintWallet) Split(proofs []cashu.Proof, amount uint64, scndSecret strin
 	})
 	w.proofs = append(w.proofs, frstProofs...)
 	w.proofs = append(w.proofs, scndProofs...)
-	err = storeProofs(append(frstProofs, scndProofs...))
+	err = w.StoreProofs(append(frstProofs, scndProofs...))
 	if err != nil {
 		return nil, nil, err
 	}
 	for _, proof := range proofs {
-		err = invalidateProof(proof)
+		err = w.invalidateProof(proof)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 	return frstProofs, scndProofs, nil
 }
-func (w MintWallet) split(proofs []cashu.Proof, amount uint64, scndSecret string) (keep []cashu.Proof, send []cashu.Proof, err error) {
+func (w *Wallet) split(proofs []cashu.Proof, amount uint64, scndSecret string) (keep []cashu.Proof, send []cashu.Proof, err error) {
 
 	total := SumProofs(proofs)
 	frstAmt := total - amount
@@ -406,4 +439,169 @@ func SumProofs(p []cashu.Proof) uint64 {
 		sum += proof.Amount
 	}
 	return sum
+}
+
+func (w *Wallet) Invalidate(proofs []cashu.Proof) error {
+	if len(proofs) == 0 {
+		proofs = w.proofs
+	}
+	resp, err := w.Client.Check(cashu.CheckSpendableRequest{Proofs: proofs})
+	if err != nil {
+		return err
+	}
+	invalidatedProofs := make([]cashu.Proof, 0)
+	for i, spendable := range resp.Spendable {
+		if !spendable {
+			invalidatedProofs = append(invalidatedProofs, proofs[i])
+			err = w.invalidateProof(proofs[i])
+			if err != nil {
+				return err
+			}
+		}
+	}
+	invalidatedSecrets := make([]string, 0)
+	for _, proof := range invalidatedProofs {
+		invalidatedSecrets = append(invalidatedSecrets, proof.Secret)
+	}
+	w.proofs = lo.Filter[cashu.Proof](w.proofs, func(p cashu.Proof, i int) bool {
+		_, found := lo.Find[string](invalidatedSecrets, func(secret string) bool {
+			return secret == p.Secret
+		})
+		return !found
+	})
+	return nil
+}
+func (w *Wallet) invalidateProof(proof cashu.Proof) error {
+	err := w.Storage.DeleteProof(proof)
+	if err != nil {
+		return err
+	}
+	return w.Storage.StoreUsedProofs(
+		cashu.ProofsUsed{
+			Secret:   proof.Secret,
+			Amount:   proof.Amount,
+			C:        proof.C,
+			TimeUsed: time.Now(),
+		},
+	)
+}
+
+func (w *Wallet) loadMint(keySetId string) {
+	/*keySet, err := Storage.GetKeySet(db.KeySetWithId(keySetId))
+	if err != nil {
+		panic(err)
+	}
+	*/
+	for _, set := range w.keySets {
+		if set.Id == keySetId {
+			w.currentKeySet = &set
+		}
+	}
+	w.Client.Url = w.currentKeySet.MintUrl
+	w.LoadDefaultMint()
+}
+func (w *Wallet) setCurrentKeySet(keySet crypto.KeySet) {
+	for _, set := range w.keySets {
+		if set.Id == keySet.Id {
+			w.currentKeySet = &keySet
+		}
+	}
+}
+func (w *Wallet) loadPersistedKeySets() {
+	persistedKeySets, err := w.Storage.GetKeySet()
+	if err != nil {
+		panic(err)
+	}
+	w.keySets = persistedKeySets
+}
+func (w *Wallet) LoadDefaultMint() {
+	keySet, _ := w.persistCurrentKeysSet()
+	w.loadPersistedKeySets()
+	w.setCurrentKeySet(keySet)
+	k, err := w.Client.KeySets()
+	if err != nil {
+		panic(err)
+	}
+	for _, set := range k.KeySets {
+		if _, found := lo.Find[crypto.KeySet](w.keySets, func(k crypto.KeySet) bool {
+			return set == k.Id
+		}); !found {
+			err = w.checkAndPersistKeySet(set)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
+}
+
+func (w *Wallet) persistCurrentKeysSet() (crypto.KeySet, error) {
+	activeKeys, err := w.Client.Keys()
+	if err != nil {
+		panic(err)
+	}
+	return w.persistKeysSet(activeKeys)
+}
+
+func (w *Wallet) persistKeysSet(keys map[uint64]*secp256k1.PublicKey) (crypto.KeySet, error) {
+	keySet := crypto.KeySet{MintUrl: w.Client.Url, FirstSeen: time.Now(), PublicKeys: crypto.PublicKeyList{}}
+	keySet.SetPublicKeyList(keys)
+	keySet.DeriveKeySetId()
+	err := w.Storage.StoreKeySet(keySet)
+	if err != nil {
+		return keySet, err
+	}
+	return keySet, nil
+}
+
+func (w *Wallet) checkAndPersistKeySet(id string) error {
+	var ks []crypto.KeySet
+	var err error
+	if ks, err = w.Storage.GetKeySet(db.KeySetWithId(id)); err != nil || len(ks) == 0 {
+		keys, err := w.Client.KeysForKeySet(id)
+		if err != nil {
+			return err
+		}
+		k, err := w.persistKeysSet(keys)
+		ks = append(ks, k)
+		if err != nil {
+			return err
+		}
+	}
+	w.keySets = append(w.keySets, ks...)
+	return nil
+}
+
+func (w *Wallet) initializeDatabase(wallet string) {
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+	walletPath := path.Join(dirname, ".cashu", wallet)
+	db.Config.Database.Sqlite = &db.SqliteConfig{Path: walletPath, FileName: "wallet.sqlite3"}
+	err = env.Parse(&w.Config)
+	if err != nil {
+		panic(err)
+	}
+	w.Storage = db.NewSqlDatabase()
+	err = w.Storage.Migrate(cashu.Proof{})
+	if err != nil {
+		panic(err)
+	}
+	err = w.Storage.Migrate(cashu.ProofsUsed{})
+	if err != nil {
+		panic(err)
+	}
+	err = w.Storage.Migrate(crypto.KeySet{})
+	if err != nil {
+		panic(err)
+	}
+	err = w.Storage.Migrate(cashu.P2SHScript{})
+	if err != nil {
+		panic(err)
+	}
+	err = w.Storage.Migrate(cashu.CreateInvoice())
+	if err != nil {
+		panic(err)
+	}
 }

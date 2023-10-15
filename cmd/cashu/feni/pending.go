@@ -2,6 +2,7 @@ package feni
 
 import (
 	"fmt"
+	"github.com/cashubtc/cashu-feni/wallet"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -10,15 +11,15 @@ var pendingCommand = &cobra.Command{
 	Use:    "pending",
 	Short:  "Show pending tokens",
 	Long:   ``,
-	PreRun: PreRunFeni,
-	Run:    pendingCmd,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, pendingCmd),
 }
 
 func init() {
-	RootCmd.AddCommand(pendingCommand)
+	RootCmd.Command().AddCommand(pendingCommand)
 }
-func pendingCmd(cmd *cobra.Command, args []string) {
-	reserved, err := storage.GetReservedProofs()
+func pendingCmd(wallet *wallet.Wallet, params cobraParameter) {
+	reserved, err := wallet.Storage.GetReservedProofs()
 	if err != nil {
 		log.Fatal(err)
 	}

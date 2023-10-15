@@ -2,23 +2,24 @@ package feni
 
 import (
 	"fmt"
+	"github.com/cashubtc/cashu-feni/wallet"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	RootCmd.AddCommand(balanceCommand)
+	RootCmd.Command().AddCommand(balanceCommand)
 }
 
 var balanceCommand = &cobra.Command{
 	Use:    "balance",
 	Short:  "Check your balance",
 	Long:   ``,
-	PreRun: PreRunFeni,
-	Run:    balance,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, balance),
 }
 
-func balance(cmd *cobra.Command, args []string) {
-	balances, err := Wallet.balancePerKeySet()
+func balance(wallet *wallet.Wallet, params cobraParameter) {
+	balances, err := wallet.Balances()
 	if err != nil {
 		panic(err)
 	}

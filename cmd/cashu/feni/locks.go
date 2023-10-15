@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"github.com/c-bata/go-prompt"
 	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/wallet"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	RootCmd.AddCommand(locksCommand)
+	RootCmd.Command().AddCommand(locksCommand)
 
 }
 
 const getLocksAnnotationValue = "GetLocks"
 
-var GetLocksDynamic = func(annotationValue string) []prompt.Suggest {
-	scripts, err := storage.GetScripts("")
+var GetLocksDynamic = func(wallet *wallet.Wallet, annotationValue string) []prompt.Suggest {
+	scripts, err := wallet.Storage.GetScripts("")
 	if err != nil {
 		return nil
 	}
@@ -27,25 +28,25 @@ var GetLocksDynamic = func(annotationValue string) []prompt.Suggest {
 	return suggestions
 }
 var locksCommand = &cobra.Command{
-	Use:    "locks",
-	Short:  "Show unused receiving locks",
-	Long:   `Generates a receiving lock for cashu tokens.`,
-	PreRun: PreRunFeni,
+	Use:   "locks",
+	Short: "Show unused receiving locks",
+	Long:  `Generates a receiving lock for cashu tokens.`,
 	Annotations: map[string]string{
 		DynamicSuggestionsAnnotation: getLocksAnnotationValue,
 	},
-	Run: locks,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, locks),
 }
 
-func locks(cmd *cobra.Command, args []string) {
-	scriptLocks := getP2SHLocks()
+func locks(wallet *wallet.Wallet, params cobraParameter) {
+	scriptLocks := getP2SHLocks(wallet)
 	for _, l := range scriptLocks {
 		fmt.Printf("P2SH:%s\n", l.Address)
 	}
 }
 
-func getP2SHLocks() []cashu.P2SHScript {
-	scripts, err := storage.GetScripts("")
+func getP2SHLocks(wallet *wallet.Wallet) []cashu.P2SHScript {
+	scripts, err := wallet.Storage.GetScripts("")
 	if err != nil {
 		return nil
 	}

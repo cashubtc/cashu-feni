@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cashubtc/cashu-feni/cashu"
+	"github.com/cashubtc/cashu-feni/wallet"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"strings"
 )
 
 func init() {
-	RootCmd.AddCommand(receiveCommand)
+	RootCmd.Command().AddCommand(receiveCommand)
 	receiveCommand.PersistentFlags().StringVarP(&lockFlag, "lock", "l", "", "Lock tokens (P2SH)")
 
 }
@@ -20,8 +21,8 @@ var receiveCommand = &cobra.Command{
 	Use:    "receive",
 	Short:  "Receive tokens",
 	Long:   `Receive cashu tokens from another user`,
-	PreRun: PreRunFeni,
-	Run:    receive,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, receive),
 }
 
 type Tokens struct {
@@ -65,21 +66,15 @@ func NewTokens(t string) *Tokens {
 	return token
 }
 
-type Mint struct {
-	URL string   `json:"url"`
-	Ks  []string `json:"ks"`
-}
-type Mints map[string]Mint
-
-func receive(cmd *cobra.Command, args []string) {
+func receive(wallet *wallet.Wallet, params cobraParameter) {
 	var script, signature string
-	coin := args[0]
+	coin := params.args[0]
 	if lockFlag != "" {
 		if !flagIsPay2ScriptHash() {
 			log.Fatal("lock has wrong format. Expected P2SH:<address>")
 		}
 		addressSplit := strings.Split(lockFlag, "P2SH:")[1]
-		p2shScripts, err := getUnusedLocks(addressSplit)
+		p2shScripts, err := getUnusedLocks(wallet, addressSplit)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -96,16 +91,30 @@ func receive(cmd *cobra.Command, args []string) {
 		log.Fatal("Aborted!")
 	}*/
 	for _, token := range tokens.Token {
-		defaultUrl := Wallet.Client.Url
+		defaultUrl := wallet.Client.Url
 		defer func() {
-			Wallet.Client.Url = defaultUrl
+			wallet.Client.Url = defaultUrl
 		}()
-		Wallet.Client.Url = token.Mint
-		_, _, err := Wallet.redeem(token.Proofs, script, signature)
+		wallet.Client.Url = token.Mint
+		_, _, err := redeem(wallet, token.Proofs, script, signature)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+}
+func redeem(w *wallet.Wallet, proofs []cashu.Proof, scndScript, scndSignature string) (keep []cashu.Proof, send []cashu.Proof, err error) {
+	if scndScript != "" && scndSignature != "" {
+		log.Infof("Unlock script: %s", scndScript)
+		for i := range proofs {
+			proofs[i].Script = &cashu.P2SHScript{
+				Script:    scndScript,
+				Signature: scndSignature}
+		}
+	}
+	return w.Split(proofs, wallet.SumProofs(proofs), "")
+}
+func getUnusedLocks(wallet *wallet.Wallet, addressSplit string) ([]cashu.P2SHScript, error) {
+	return wallet.Storage.GetScripts(addressSplit)
 }
 
 /*

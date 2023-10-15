@@ -1,4 +1,4 @@
-package feni
+package wallet
 
 import (
 	"reflect"

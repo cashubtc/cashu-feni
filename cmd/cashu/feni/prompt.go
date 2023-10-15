@@ -1,10 +1,13 @@
 package feni
 
 import (
+	"fmt"
 	"github.com/c-bata/go-prompt"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -14,11 +17,14 @@ const DynamicSuggestionsAnnotation = "cobra-prompt-dynamic-suggestions"
 // PersistFlagValuesFlag the flag that will be avaiailable when PersistFlagValues is true
 const PersistFlagValuesFlag = "persist-flag-values"
 
+var sendRegex = regexp.MustCompile("send [0-9]")
+var WalletName string
+
 // CobraPrompt given a Cobra command it will make every flag and sub commands available as suggestions.
 // Command.Short will be used as description for the suggestion.
 type CobraPrompt struct {
 	// RootCmd is the start point, all its sub commands and flags will be available as suggestions
-	RootCmd *cobra.Command
+	RootCmd *RootCommand
 
 	// GoPromptOptions is for customize go-prompt
 	// see https://github.com/c-bata/go-prompt/blob/master/option.go
@@ -56,6 +62,28 @@ type CobraPrompt struct {
 	SuggestionFilter func(suggestions []prompt.Suggest, document *prompt.Document) []prompt.Suggest
 }
 
+func DynamicSuggestion(cmd *RootCommand) func(annotationValue string, document *prompt.Document) []prompt.Suggest {
+	return func(annotationValue string, document *prompt.Document) []prompt.Suggest {
+		if document.Text == "-w " || document.Text == "--wallet " {
+			log.Println(document.Text)
+			if suggestions := GetWalletsDynamic(annotationValue); suggestions != nil {
+				return suggestions
+			}
+		} else if document.Text == "locks " || document.Text == "-l " {
+			if suggestions := GetLocksDynamic(cmd.wallet, annotationValue); suggestions != nil {
+				return suggestions
+			}
+		} else if sendRegex.MatchString(document.Text) {
+			document.Text = fmt.Sprintf("%s %s", document.Text, "-m ")
+			if suggestions := GetMintsDynamic(cmd.wallet, annotationValue); suggestions != nil {
+				return suggestions
+			}
+		}
+		return nil
+	}
+
+}
+
 // Run will automatically generate suggestions for all cobra commands and flags defined by RootCmd
 // and execute the selected commands. Run will also reset all given flags by default, see PersistFlagValues
 func (co CobraPrompt) Run() {
@@ -64,7 +92,7 @@ func (co CobraPrompt) Run() {
 	}
 
 	co.prepare()
-	co.RootCmd.SetIn(os.Stdin)
+	co.RootCmd.Command().SetIn(os.Stdin)
 	p := prompt.New(
 		func(in string) {
 			go func() {
@@ -72,11 +100,11 @@ func (co CobraPrompt) Run() {
 			}()
 			promptArgs := co.parseArgs(in)
 			os.Args = append([]string{os.Args[0]}, promptArgs...)
-			if err := co.RootCmd.Execute(); err != nil {
+			if err := co.RootCmd.Command().Execute(); err != nil {
 				if co.OnErrorFunc != nil {
 					co.OnErrorFunc(err)
 				} else {
-					co.RootCmd.PrintErrln(err)
+					co.RootCmd.Command().PrintErrln(err)
 					os.Exit(1)
 				}
 			}
@@ -101,15 +129,15 @@ func (co CobraPrompt) parseArgs(in string) []string {
 func (co CobraPrompt) prepare() {
 	if co.ShowHelpCommandAndFlags {
 		// TODO: Add suggestions for help command
-		co.RootCmd.InitDefaultHelpCmd()
+		co.RootCmd.Command().InitDefaultHelpCmd()
 	}
 
 	if co.DisableCompletionCommand {
-		co.RootCmd.CompletionOptions.DisableDefaultCmd = true
+		co.RootCmd.Command().CompletionOptions.DisableDefaultCmd = true
 	}
 
 	if co.AddDefaultExitCommand {
-		co.RootCmd.AddCommand(&cobra.Command{
+		co.RootCmd.Command().AddCommand(&cobra.Command{
 			Use:   "exit",
 			Short: "Exit prompt",
 			Run: func(cmd *cobra.Command, args []string) {
@@ -119,7 +147,7 @@ func (co CobraPrompt) prepare() {
 	}
 
 	if co.PersistFlagValues {
-		co.RootCmd.PersistentFlags().BoolP(PersistFlagValuesFlag, "",
+		co.RootCmd.Command().PersistentFlags().BoolP(PersistFlagValuesFlag, "",
 			false, "Persist last given value for flags")
 	}
 }
@@ -128,12 +156,12 @@ func findSuggestions(co *CobraPrompt, d *prompt.Document) []prompt.Suggest {
 	command := co.RootCmd
 	args := strings.Fields(d.CurrentLine())
 
-	if found, _, err := command.Find(args); err == nil {
-		command = found
+	if found, _, err := command.Command().Find(args); err == nil {
+		command.SetCommand(found)
 	}
 
 	var suggestions []prompt.Suggest
-	persistFlagValues, _ := command.Flags().GetBool(PersistFlagValuesFlag)
+	persistFlagValues, _ := command.Command().Flags().GetBool(PersistFlagValuesFlag)
 	addFlags := func(flag *pflag.Flag) {
 		if flag.Changed && !persistFlagValues {
 			flag.Value.Set(flag.DefValue)
@@ -148,11 +176,11 @@ func findSuggestions(co *CobraPrompt, d *prompt.Document) []prompt.Suggest {
 		}
 	}
 
-	command.LocalFlags().VisitAll(addFlags)
-	command.InheritedFlags().VisitAll(addFlags)
+	command.Command().LocalFlags().VisitAll(addFlags)
+	command.Command().InheritedFlags().VisitAll(addFlags)
 
-	if command.HasAvailableSubCommands() {
-		for _, c := range command.Commands() {
+	if command.Command().HasAvailableSubCommands() {
+		for _, c := range command.Command().Commands() {
 			if !c.Hidden && !co.ShowHiddenCommands {
 				suggestions = append(suggestions, prompt.Suggest{Text: c.Name(), Description: c.Short})
 			}
@@ -162,7 +190,7 @@ func findSuggestions(co *CobraPrompt, d *prompt.Document) []prompt.Suggest {
 		}
 	}
 
-	annotation := command.Annotations[DynamicSuggestionsAnnotation]
+	annotation := command.Command().Annotations[DynamicSuggestionsAnnotation]
 	if co.DynamicSuggestionsFunc != nil && annotation != "" {
 		sugs := co.DynamicSuggestionsFunc(annotation, d)
 		if sugs != nil {

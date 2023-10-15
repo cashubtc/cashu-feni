@@ -3,6 +3,7 @@ package feni
 import (
 	"bytes"
 	"fmt"
+	"github.com/cashubtc/cashu-feni/wallet"
 	"strconv"
 
 	"github.com/c-bata/go-prompt"
@@ -13,31 +14,31 @@ import (
 )
 
 func init() {
-	RootCmd.AddCommand(sendCommand)
+	RootCmd.Command().AddCommand(sendCommand)
 	sendCommand.PersistentFlags().StringVarP(&lockFlag, "lock", "l", "", "Lock tokens (P2SH)")
 }
 
 var lockFlag string
 
 var sendCommand = &cobra.Command{
-	Use:    "send <amount> <mint_id>",
-	Short:  "Send tokens",
-	Long:   `Send cashu tokens to another user`,
-	PreRun: PreRunFeni,
+	Use:   "send <amount> <mint_id>",
+	Short: "Send tokens",
+	Long:  `Send cashu tokens to another user`,
 	Annotations: map[string]string{
 		DynamicSuggestionsAnnotation: getLocksAnnotationValue, // get suggestion for p2sh
 	},
-	Run: send,
+	PreRun: RunCommandWithWallet(RootCmd, preRun),
+	Run:    RunCommandWithWallet(RootCmd, send),
 }
 var filteredKeySets []crypto.KeySet
-var GetMintsDynamic = func(annotationValue string) []prompt.Suggest {
-	keysets, err := storage.GetKeySet()
+var GetMintsDynamic = func(wallet *wallet.Wallet, annotationValue string) []prompt.Suggest {
+	keysets, err := wallet.Storage.GetKeySet()
 	if err != nil {
 		return nil
 	}
 	suggestions := make([]prompt.Suggest, 0)
 	setBalanceAvailable := make(map[string]uint64)
-	balances, err := Wallet.balancePerKeySet()
+	balances, err := wallet.Balances()
 	if err != nil {
 		panic(err)
 	}
@@ -57,14 +58,14 @@ var GetMintsDynamic = func(annotationValue string) []prompt.Suggest {
 	return suggestions
 }
 
-func askMintSelection(cmd *cobra.Command) error {
-	keysets, err := storage.GetKeySet()
+func askMintSelection(wallet *wallet.Wallet, cmd *cobra.Command) error {
+	keysets, err := wallet.Storage.GetKeySet()
 	if err != nil {
 		return nil
 	}
 	setBalance := make(map[string]uint64)
 	setBalanceAvailable := make(map[string]uint64)
-	balances, err := Wallet.balancePerKeySet()
+	balances, err := wallet.Balances()
 	if err != nil {
 		panic(err)
 	}
@@ -78,8 +79,8 @@ func askMintSelection(cmd *cobra.Command) error {
 		cmd.Printf("Mint: %d Balance: %d sat (available: %d) URL: %s\n", i+1, setBalance[set.MintUrl], setBalanceAvailable[set.MintUrl], set.MintUrl)
 	}
 	cmd.Printf("Select mint [1-%d, press enter default 1]\n\n", len(filteredKeySets))
-	Wallet.Client.Url = filteredKeySets[askInt(cmd)-1].MintUrl
-	Wallet.loadDefaultMint()
+	wallet.Client.Url = filteredKeySets[askInt(cmd)-1].MintUrl
+	wallet.LoadDefaultMint()
 	return nil
 }
 
@@ -105,9 +106,9 @@ func askInt(cmd *cobra.Command) int {
 	return s
 }
 
-func send(cmd *cobra.Command, args []string) {
-	if len(args) < 2 {
-		cmd.Help()
+func send(wallet *wallet.Wallet, params cobraParameter) {
+	if len(params.args) < 2 {
+		params.cmd.Help()
 		return
 	}
 	if lockFlag != "" && len(lockFlag) < 22 {
@@ -119,16 +120,16 @@ func send(cmd *cobra.Command, args []string) {
 		p2sh = true
 	}
 
-	mint, _ := strconv.Atoi(args[1])
-	Wallet.Client.Url = filteredKeySets[mint].MintUrl
-	Wallet.loadDefaultMint()
+	mint, _ := strconv.Atoi(params.args[1])
+	wallet.Client.Url = filteredKeySets[mint].MintUrl
+	wallet.LoadDefaultMint()
 
-	amount, err := strconv.ParseUint(args[0], 10, 64)
+	amount, err := strconv.ParseUint(params.args[0], 10, 64)
 	if err != nil {
 		fmt.Println("invalid amount")
 		return
 	}
-	_, sendProofs, err := Wallet.SplitToSend(amount, lockFlag, true)
+	_, sendProofs, err := wallet.SplitToSend(amount, lockFlag, true)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -137,7 +138,7 @@ func send(cmd *cobra.Command, args []string) {
 	if lockFlag != "" && !p2sh {
 		hide = true
 	}
-	token, err := Wallet.serializeToken(sendProofs, hide)
+	token, err := serializeToken(wallet.Client, sendProofs, hide)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -149,10 +150,10 @@ func send(cmd *cobra.Command, args []string) {
 // If the hideSecrets flag is set to true, the Secret field of each proof will be set to an empty string before serialization.
 // The serialized data is returned as a base64-encoded string.
 // If an error occurs, the empty string is returned as the result and an error is returned as the second return value.
-func (w MintWallet) serializeToken(proofs []cashu.Proof, hideSecrets bool) (string, error) {
+func serializeToken(client *wallet.Client, proofs []cashu.Proof, hideSecrets bool) (string, error) {
 	// Create a new Token structure with the given proofs and an empty Mints map.
 	token := Tokens{Token: make([]Token, 0)}
-	token.Token = append(token.Token, Token{Proofs: proofs, Mint: w.Client.Url})
+	token.Token = append(token.Token, Token{Proofs: proofs, Mint: client.Url})
 	// Iterate over each proof in the `proofs` slice.
 	for i := range proofs {
 		// If `hideSecrets` is true, set the `Secret` field of the current proof to an empty string.
