@@ -99,7 +99,6 @@ func (co CobraPrompt) Run() {
 
 			}()
 			promptArgs := co.parseArgs(in)
-
 			os.Args = append([]string{os.Args[0]}, promptArgs...)
 			if err := co.RootCmd.Command().Execute(); err != nil {
 				if co.OnErrorFunc != nil {

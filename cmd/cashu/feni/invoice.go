@@ -30,7 +30,7 @@ func mintCmd(wallet *wallet.Wallet, params cobraParameter) {
 		panic(err)
 	}
 	if amount > 0 {
-		if !Config.Lightning {
+		if !wallet.Config.Lightning {
 			if _, err := wallet.Mint(uint64(amount), hash); err != nil {
 				log.Error(err)
 			}
